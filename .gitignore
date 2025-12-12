@@ -1,0 +1,79 @@
+# Build artifacts
+bin/
+obj/
+out/
+artifacts/
+
+# VS / VS Code / Rider
+.vs/
+.vscode/
+.idea/
+
+# User-specific files
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+
+# Logs
+*.log
+logs/
+log/
+**/serilog-*.json
+
+# .NET
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/packages/
+packages/
+*.nuspec
+*.psmdcp
+
+# Entity Framework / Migrations extras
+**/Migrations/**/__EFMigrationsHistory*
+*.jfm
+
+# Coverage / test output
+TestResults/
+coverage/
+coverage.cobertura.xml
+*.coverage
+*.coveragexml
+
+# Docker
+docker-compose.override.yml
+**/docker-data/
+**/.docker/
+**/.cache/
+.env
+.env.*
+
+# Kubernetes generated
+**/k8s/generated/
+**/kubernetes/generated/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Archive / backup
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
+*.bak
+*.tmp
+*.swp
+
+
+
+# Local development overrides
+*secrets.json
