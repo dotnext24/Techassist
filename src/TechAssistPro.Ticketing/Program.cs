@@ -4,6 +4,9 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using TechAssistPro.Infrastructure.Messaging;
+using TechAssistPro.Infrastructure.SchemaRegistry;
+using TechAssistPro.SharedKernel.Events;
 using TechAssistPro.SharedKernel.Responses;
 using TechAssistPro.Ticketing.API;
 using TechAssistPro.Ticketing.Application.Commands;
@@ -35,11 +38,17 @@ builder.Services.AddDbContext<TicketDbContext>(options =>
 
 
 
+
 // --------------------------------------------------
 // 2. Register Repositories
 // --------------------------------------------------
 builder.Services.AddScoped<ITicketRepository, TicketRepository>();
 builder.Services.AddScoped<IResponseFactory, ResponseFactory>();
+builder.Services.AddSingleton<ISchemaRegistry, SchemaRegistry>();
+builder.Services.AddSingleton<IRabbitMQConnection>(sp =>
+    new RabbitMQConnection(builder.Configuration.GetConnectionString("RabbitMQ")!)
+);
+builder.Services.AddScoped<IEventPublisher, RabbitMqEventPublisher>();
 // --------------------------------------------------
 // 3. MediatR
 // --------------------------------------------------
@@ -83,6 +92,13 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Load schemas from files
+var schemaRegistry = app.Services.GetRequiredService<ISchemaRegistry>();
+await schemaRegistry.RegisterSchemaFromFileAsync(
+    "TicketCreatedEvent",
+    1,
+    "Schemas/ticket-created-v1.json");
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -100,10 +116,11 @@ app.MapControllers();
 // 10. Minimal API Endpoints (Ticket Endpoints)
 // --------------------------------------------------
 TicketEndpoints.Map(app);
-try{
-app.Run();
+try
+{
+    app.Run();
 }
-catch(Exception ex)
+catch (Exception ex)
 {
     Console.Write(ex.ToString());
 }

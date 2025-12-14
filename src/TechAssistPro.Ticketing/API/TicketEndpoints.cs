@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using FluentValidation;
 using MediatR;
 using TechAssistPro.SharedKernel.Responses;
@@ -15,16 +16,17 @@ namespace TechAssistPro.Ticketing.API
         {
             var group = app.MapGroup("/api/tickets");
 
-            group.MapPost("/", async ValueTask<IResult> (CreateTicketDto cmd, IResponseFactory responder, IMediator mediator, IValidator<CreateTicketDto> validator) =>
+            group.MapPost("/", async ValueTask<IResult> (CreateTicketDto request, IResponseFactory responder, IMapper mapper,IMediator mediator, IValidator<CreateTicketDto> validator) =>
             {
-                var validationResult = await validator.ValidateAsync(cmd);
+                var validationResult = await validator.ValidateAsync(request);
 
                 if (!validationResult.IsValid)
                 {
                     return Results.BadRequest(responder.Error(errors: validationResult.ToDictionary()));
 
                 }
-                var result = await mediator.Send(cmd);
+                var command = mapper.Map<CreateTicketCommand>(request);
+                var result = await mediator.Send(command);
                 return Results.Ok(responder.Success(result));
             });
 

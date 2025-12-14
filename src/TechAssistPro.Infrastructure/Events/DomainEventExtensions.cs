@@ -1,13 +1,16 @@
 // Infrastructure/Events/DomainEventExtensions.cs
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using TechAssistPro.Infrastructure.Messaging;
 using TechAssistPro.SharedKernel.Domain;
+
+namespace TechAssistPro.Infrastructure.Events;
 
 public static class DomainEventExtensions
 {
     public static async Task DispatchDomainEventsAsync(
-        this IMediator mediator,
-        DbContext context,
+        this DbContext context,
+        IMediator mediator,
         CancellationToken cancellationToken = default)
     {
         var entities = context.ChangeTracker
@@ -24,7 +27,10 @@ public static class DomainEventExtensions
 
         foreach (var domainEvent in domainEvents)
         {
-            await mediator.Publish(domainEvent, cancellationToken);
+            var notification =
+                DomainEventNotificationFactory.Create(domainEvent);
+
+            await mediator.Publish(notification, cancellationToken);
         }
     }
 }

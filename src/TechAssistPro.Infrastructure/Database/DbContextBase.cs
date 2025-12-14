@@ -1,6 +1,7 @@
 // Infrastructure/Database/DbContextBase.cs
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using TechAssistPro.Infrastructure.Events;
 
 public abstract class DbContextBase : DbContext
 {
@@ -12,7 +13,11 @@ public abstract class DbContextBase : DbContext
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         // Dispatch domain events before commit
-        await _mediator.DispatchDomainEventsAsync(this, cancellationToken);
-        return await base.SaveChangesAsync(cancellationToken);
+        
+        var result = await base.SaveChangesAsync(cancellationToken);
+
+        await this.DispatchDomainEventsAsync(_mediator, cancellationToken);
+
+        return result;
     }
 }

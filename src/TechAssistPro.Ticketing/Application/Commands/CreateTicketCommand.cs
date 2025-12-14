@@ -10,6 +10,7 @@ namespace TechAssistPro.Ticketing.Application.Commands
     string Description,
     TicketCategory Category,
     TicketPriority Priority,
-    TicketChannel Channel
+    TicketChannel Channel,
+    string CreatedBy
 ) : IRequest<TicketResponseDto>;
 }

@@ -39,8 +39,30 @@ public class Ticket :Entity
         Status = TicketStatus.New;
 
         CreatedAtUtc = DateTime.UtcNow;
-        LastUpdatedAtUtc = CreatedAtUtc;
     }
+
+    public static Ticket Create(
+    string customerId,
+    string subject,
+    string description,
+    TicketCategory category,
+    TicketPriority priority,
+    TicketChannel channel,
+    string createdBy)
+{
+    var ticket = new Ticket(
+        customerId,
+        subject,
+        description,
+        category,
+        priority,
+        channel);
+    ticket.Touch(createdBy);
+    ticket.AddCreatedEvent(); 
+
+    return ticket;
+}
+
 
     public void Update(string subject, string description, TicketCategory category, TicketPriority priority, string updatedBy)
     {
@@ -73,5 +95,10 @@ public class Ticket :Entity
     {
         LastUpdatedAtUtc = DateTime.UtcNow;
         UpdatedBy = updatedBy;
+    }
+
+     private void AddCreatedEvent()
+    {
+        RaiseDomainEvent(new TicketCreatedDomainEvent(this));
     }
 }

@@ -25,13 +25,14 @@ namespace TechAssistPro.Ticketing.Application.Commands
             CreateTicketCommand request,
             CancellationToken cancellationToken)
         {
-            var ticket = new Ticket(
+            var ticket = Ticket.Create(
                 request.CustomerId,
                 request.Subject,
                 request.Description,
                 request.Category,
                 request.Priority,
-                request.Channel);
+                request.Channel,
+                request.CreatedBy);
 
             await _repository.AddAsync(ticket, cancellationToken);
 

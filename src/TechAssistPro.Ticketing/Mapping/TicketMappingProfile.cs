@@ -1,4 +1,5 @@
 using AutoMapper;
+using TechAssistPro.Ticketing.Application.Commands;
 using TechAssistPro.Ticketing.Dtos;
 
 namespace TechAssistPro.Ticketing.Mapping
@@ -24,15 +25,7 @@ namespace TechAssistPro.Ticketing.Mapping
      ));
 
 
-            CreateMap<CreateTicketDto, Ticket>()
-                .ConstructUsing(src =>
-                    new Ticket(
-                        src.CustomerId,
-                        src.Subject,
-                        src.Description,
-                        src.Category,
-                        src.Priority,
-                        src.Channel));
+          CreateMap<CreateTicketDto, CreateTicketCommand>();
 
             CreateMap<UpdateTicketDto, Ticket>()
                 .ForAllMembers(opts => opts.Ignore()); // updates handled in domain
