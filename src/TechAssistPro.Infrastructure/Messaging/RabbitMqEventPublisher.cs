@@ -4,20 +4,28 @@ using System.Text;
 using TechAssistPro.SharedKernel.Events;
 using TechAssistPro.Infrastructure.SchemaRegistry;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using MediatR;
+using TechAssistPro.Infrastructure.Events;
 
 namespace TechAssistPro.Infrastructure.Messaging
 {
-    public class RabbitMqEventPublisher : IEventPublisher, IAsyncDisposable
+    public class RabbitMqEventPublisher 
+        : IEventPublisher,
+          IAsyncDisposable
     {
         private readonly IRabbitMQConnection _connection;
         private readonly ISchemaRegistry _schemaRegistry;
         private IChannel? _channel;
+        private readonly ILogger<RabbitMqEventPublisher> _logger;
         private readonly SemaphoreSlim _channelLock = new(1, 1);
-        public RabbitMqEventPublisher(IRabbitMQConnection connection, ISchemaRegistry schemaRegistry)
+        public RabbitMqEventPublisher(IRabbitMQConnection connection, ISchemaRegistry schemaRegistry, ILogger<RabbitMqEventPublisher> logger)
         {
             _connection = connection;
             _schemaRegistry = schemaRegistry;
+            _logger = logger;
         }
+      
 
         public async Task PublishAsync(
             string eventType,
@@ -26,7 +34,7 @@ namespace TechAssistPro.Infrastructure.Messaging
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-
+            _logger.LogInformation("RabbitMqEventPublisher Called");
             // 1. Serialize event data
             string payload = JsonSerializer.Serialize(eventData, new JsonSerializerOptions
             {

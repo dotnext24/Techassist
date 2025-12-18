@@ -14,10 +14,12 @@ namespace TechAssistPro.Ticketing.Application.Commands
     {
         private readonly ITicketRepository _repository;
         private readonly IMapper _mapper;
-        public CreateTicketCommandHandler(ITicketRepository repository, IMapper mapper)
+         private readonly ILogger<CreateTicketCommandHandler> _logger;
+        public CreateTicketCommandHandler(ITicketRepository repository, IMapper mapper, ILogger<CreateTicketCommandHandler> logger)
         {
             _repository = repository;
             _mapper = mapper;
+            _logger=logger;
 
         }
 
@@ -25,6 +27,7 @@ namespace TechAssistPro.Ticketing.Application.Commands
             CreateTicketCommand request,
             CancellationToken cancellationToken)
         {
+            _logger.LogInformation("CreateTicketCommandHandler Called");
             var ticket = Ticket.Create(
                 request.CustomerId,
                 request.Subject,

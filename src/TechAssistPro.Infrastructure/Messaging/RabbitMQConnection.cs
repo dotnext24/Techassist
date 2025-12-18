@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 
 namespace TechAssistPro.Infrastructure.Messaging
@@ -8,15 +9,18 @@ namespace TechAssistPro.Infrastructure.Messaging
     {
         private readonly ConnectionFactory _factory;
         private IConnection? _connection;
-
-        public RabbitMQConnection(string amqpUri)
+        private readonly ILogger<RabbitMQConnection> _logger;
+        public RabbitMQConnection(string amqpUri, ILogger<RabbitMQConnection> logger)
         {
+            _logger = logger;
+            _logger.LogInformation("amqpUri:"+amqpUri);
             _factory = new ConnectionFactory
             {
                 Uri = new Uri(amqpUri),
                 AutomaticRecoveryEnabled = true,
                 NetworkRecoveryInterval = TimeSpan.FromSeconds(5)
             };
+            
         }
 
         public async Task<IConnection> ConnectAsync()
@@ -39,8 +43,11 @@ namespace TechAssistPro.Infrastructure.Messaging
         {
             try
             {
-                _connection?.CloseAsync();
-                _connection?.DisposeAsync();
+                if (_connection != null)
+                {
+                    _connection?.CloseAsync();
+                    _connection?.DisposeAsync();
+                }
             }
             catch
             {

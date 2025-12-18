@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using FluentValidation;
 using MediatR;
+using TechAssistPro.Infrastructure.Events;
 using TechAssistPro.SharedKernel.Responses;
 using TechAssistPro.Ticketing.Application.Commands;
 
@@ -16,7 +17,7 @@ namespace TechAssistPro.Ticketing.API
         {
             var group = app.MapGroup("/api/tickets");
 
-            group.MapPost("/", async ValueTask<IResult> (CreateTicketDto request, IResponseFactory responder, IMapper mapper,IMediator mediator, IValidator<CreateTicketDto> validator) =>
+            group.MapPost("/", async ValueTask<IResult> (CreateTicketDto request, IResponseFactory responder, IMapper mapper, IMediator mediator, IValidator<CreateTicketDto> validator) =>
             {
                 var validationResult = await validator.ValidateAsync(request);
 
@@ -29,6 +30,14 @@ namespace TechAssistPro.Ticketing.API
                 var result = await mediator.Send(command);
                 return Results.Ok(responder.Success(result));
             });
+
+//             group.MapGet("/ping", async (IMediator mediator) =>
+// {
+//     await mediator.Publish(
+//     new DomainEventNotification<string>("TEST"));
+
+//     return "ok";
+// });
 
             // group.MapPut("/{id:guid}", async (Guid id, UpdateTicketCommand dto, IMediator mediator) =>
             // {

@@ -1,7 +1,7 @@
 using TechAssistPro.SharedKernel.Events;
 
-namespace TechAssistPro.Ticketing.Events;
-public sealed record TicketCreatedDomainEvent : IDomainEvent
+namespace TechAssistPro.Scheduling.Events;
+public sealed record TicketCreatedIntegrationEvent : IDomainEvent
 {
     public Guid EventId { get; } = Guid.NewGuid();
     public string EventType => "ticket.created";

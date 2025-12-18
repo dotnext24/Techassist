@@ -1,4 +1,5 @@
 using TechAssistPro.SharedKernel.Domain;
+using TechAssistPro.Ticketing.Events;
 
 public class Ticket :Entity
 {  

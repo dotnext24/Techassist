@@ -3,8 +3,14 @@ using TechAssistPro.SharedKernel.Events;
 
 namespace TechAssistPro.Infrastructure.Events
 {
-   public sealed record DomainEventNotification<TDomainEvent>(
-    TDomainEvent DomainEvent
-) : INotification
-    where TDomainEvent : IDomainEvent;
+    public sealed class DomainEventNotification : INotification
+    {
+        public IDomainEvent DomainEvent { get; }
+
+        public DomainEventNotification(IDomainEvent domainEvent)
+        {
+            DomainEvent = domainEvent;
+        }
+    }
+
 }

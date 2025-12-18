@@ -40,8 +40,9 @@
         "priority",
         "channel",
         "status",
-        "createdBy",
-        "createdAtUtc"
+        "createdAtUtc",
+        "updatedBy",
+        "lastUpdatedAtUtc"
       ],
 
       "properties": {
@@ -53,7 +54,7 @@
 
         "category": {
           "type": "string",
-          "enum": ["General", "Billing", "Technical", "Feedback"]
+          "enum": ["Software","Hardware","Network", "Billing", "Other"]
         },
 
         "priority": {
@@ -63,19 +64,17 @@
 
         "channel": {
           "type": "string",
-          "enum": ["Email", "Web", "Phone", "Chat"]
+          "enum": ["Email", "WhatsApp", "Phone", "Portal","WalkIn"]
         },
 
         "status": {
           "type": "string",
-          "enum": ["Open", "InProgress", "Resolved", "Closed"]
+          "enum": ["New", "InProgress", "Resolved", "Closed","Reopened"]
         },
 
         "assignedTechnicianId": {
           "type": ["string", "null"]
         },
-
-        "createdBy": { "type": "string" },
         "createdAtUtc": { "type": "string", "format": "date-time" },
 
         "updatedBy": { "type": ["string", "null"] },

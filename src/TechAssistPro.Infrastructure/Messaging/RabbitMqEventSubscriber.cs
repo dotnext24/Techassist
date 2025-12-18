@@ -4,89 +4,116 @@ using System.Text;
 using TechAssistPro.SharedKernel.Events;
 using TechAssistPro.Infrastructure.SchemaRegistry;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using RabbitMQ.Client.Events;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TechAssistPro.Infrastructure.Messaging
 {
-    public class RabbitMqEventSubscriber : IEventPublisher, IAsyncDisposable
+    public class RabbitMqEventSubscriber : IDisposable
     {
         private readonly IRabbitMQConnection _connection;
         private readonly ISchemaRegistry _schemaRegistry;
-        
-        private IChannel? _channel;
-        private readonly SemaphoreSlim _channelLock = new(1, 1);
-        public RabbitMqEventSubscriber(IRabbitMQConnection connection, ISchemaRegistry schemaRegistry)
+
+        private readonly IServiceProvider _serviceProvider;
+        private readonly ILogger<RabbitMqEventSubscriber> _logger;
+
+        private readonly List<IChannel> _channels = new();
+        public RabbitMqEventSubscriber(IRabbitMQConnection connection, ISchemaRegistry schemaRegistry, IServiceProvider serviceProvider, ILogger<RabbitMqEventSubscriber> logger)
         {
             _connection = connection;
             _schemaRegistry = schemaRegistry;
+            _serviceProvider = serviceProvider;
+            _logger = logger;
         }
 
-        public async Task PublishAsync(
-            string eventType,
-            object eventData,
-            int schemaVersion,
-            CancellationToken cancellationToken = default)
+        public async Task SubscribeAsync<TEvent>(
+          string queueName,
+          string[] routingKeys,
+          CancellationToken ct = default)
+          where TEvent : class
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            var channel = await _connection.CreateChannelAsync();
+            _channels.Add(channel);
 
-            // 1. Serialize event data
-            string payload = JsonSerializer.Serialize(eventData, new JsonSerializerOptions
+            // Exchanges
+            await channel.ExchangeDeclareAsync(
+                "ticket.events",
+                ExchangeType.Topic,
+                durable: true);
+
+            // Queue
+            await channel.QueueDeclareAsync(
+                queue: queueName,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: new Dictionary<string, object?>
+                {
+                    { "x-dead-letter-exchange", "ticket.events.dq" }
+                });
+
+            foreach (var routingKey in routingKeys)
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                WriteIndented = false
-            });
-
-            // 2. Validate against schema        
-            var isValid = await _schemaRegistry.ValidateAsync(
-                eventType,
-                schemaVersion,
-                payload);
-
-            if (!isValid)
-            {
-                var errorMsg = $"Event {eventType} v{schemaVersion} failed schema validation";
-
-                throw new InvalidOperationException(errorMsg);
+                await channel.QueueBindAsync(
+                    queue: queueName,
+                    exchange: "ticket.events",
+                    routingKey: routingKey);
             }
 
-            _channel = await _connection.CreateChannelAsync();
-            // 3. ExchangeDeclare
+            var consumer = new AsyncEventingBasicConsumer(channel);
 
-            await _channel.ExchangeDeclareAsync("ticket.events", ExchangeType.Topic, durable: true);
-
-            // 4. Publish to RabbitMQ
-            var body = Encoding.UTF8.GetBytes(payload);
-
-            var eventId = Guid.NewGuid();
-            var properties = new BasicProperties
+            consumer.ReceivedAsync += async (_, ea) =>
             {
-                DeliveryMode = DeliveryModes.Persistent,
-                MessageId = eventId.ToString(),
-                Type = eventType,
-                ContentType = "application/json",
-                Timestamp = new AmqpTimestamp(DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
-                Headers = new Dictionary<string, object?>
-            {
-                { "event-type", eventType },
-                { "schema-version", schemaVersion },
-                { "schema-validated", true },
-                { "published-at", DateTime.UtcNow.ToString("O") }
-            }
+                try
+                {
+                    var json = Encoding.UTF8.GetString(ea.Body.ToArray());
+
+                    var message = JsonSerializer.Deserialize<TEvent>(
+                        json,
+                        new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        })!;
+
+                    using var scope = _serviceProvider.CreateScope();
+
+                    var handler = scope.ServiceProvider
+                        .GetRequiredService<IIntegrationEventHandler<TEvent>>();
+
+                    await handler.HandleAsync(message, ct);
+
+                    await channel.BasicAckAsync(ea.DeliveryTag, false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "❌ Error processing {EventType}", typeof(TEvent).Name);
+
+                    await channel.BasicNackAsync(
+                        ea.DeliveryTag,
+                        multiple: false,
+                        requeue: false);
+                }
             };
 
-            await _channel.BasicPublishAsync(
-                 exchange: "ticket.events",
-                 routingKey: $"{eventType}.v{schemaVersion}",
-                 mandatory: false,
-                 basicProperties: properties,
-                 body: body);
+            await channel.BasicConsumeAsync(
+                queue: queueName,
+                autoAck: false,
+                consumer: consumer);
+
+            _logger.LogInformation(
+                "🐇 Subscribed to {EventType} on {Queue}",
+                typeof(TEvent).Name,
+                queueName);
         }
 
-        public async ValueTask DisposeAsync()
+        public void Dispose()
         {
-            if (_channel != null)
+            foreach (var channel in _channels)
             {
-                await _channel.CloseAsync();
-                await _channel.DisposeAsync();
+                channel.CloseAsync();
+                channel.Dispose();
             }
         }
     }

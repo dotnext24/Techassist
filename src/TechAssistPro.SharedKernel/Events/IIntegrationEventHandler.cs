@@ -5,8 +5,9 @@ using System.Threading.Tasks;
 
 namespace TechAssistPro.SharedKernel.Events
 {
-    public interface IEventHandler<in TEvent> where TEvent : IDomainEvent
+    public interface IIntegrationEventHandler<TEvent>
     {
-       Task Handle(TEvent domainEvent, CancellationToken ct);
+        Task HandleAsync(TEvent @event, CancellationToken ct);
     }
+
 }

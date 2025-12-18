@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechAssistPro.SharedKernel"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechAssistPro.Infrastructure", "src\TechAssistPro.Infrastructure\TechAssistPro.Infrastructure.csproj", "{BB826A95-2150-435D-A0A7-A559F45DD9E6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechAssistPro.Scheduling", "src\TechAssistPro.Scheduling\TechAssistPro.Scheduling.csproj", "{914CE71F-7073-40ED-9DFA-A3D98BF9C140}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,10 +34,15 @@ Global
 		{BB826A95-2150-435D-A0A7-A559F45DD9E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BB826A95-2150-435D-A0A7-A559F45DD9E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BB826A95-2150-435D-A0A7-A559F45DD9E6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{914CE71F-7073-40ED-9DFA-A3D98BF9C140}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{914CE71F-7073-40ED-9DFA-A3D98BF9C140}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{914CE71F-7073-40ED-9DFA-A3D98BF9C140}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{914CE71F-7073-40ED-9DFA-A3D98BF9C140}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{67019325-270C-49F1-A531-2B938713FAD0} = {7F63B80F-132B-4AB4-9C6C-F0FABE16F02A}
 		{8D058304-63A7-4D8F-A96B-5844CFE5CCBF} = {7F63B80F-132B-4AB4-9C6C-F0FABE16F02A}
 		{BB826A95-2150-435D-A0A7-A559F45DD9E6} = {7F63B80F-132B-4AB4-9C6C-F0FABE16F02A}
+		{914CE71F-7073-40ED-9DFA-A3D98BF9C140} = {7F63B80F-132B-4AB4-9C6C-F0FABE16F02A}
 	EndGlobalSection
 EndGlobal

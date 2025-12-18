@@ -3,9 +3,9 @@ using System.Text.Json.Serialization;
 using FluentValidation;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using TechAssistPro.Infrastructure.Messaging;
 using TechAssistPro.Infrastructure.SchemaRegistry;
+using TechAssistPro.Infrastructure.Events;
 using TechAssistPro.SharedKernel.Events;
 using TechAssistPro.SharedKernel.Responses;
 using TechAssistPro.Ticketing.API;
@@ -13,6 +13,8 @@ using TechAssistPro.Ticketing.Application.Commands;
 using TechAssistPro.Ticketing.Application.Validation;
 using TechAssistPro.Ticketing.Data;
 using TechAssistPro.Ticketing.Mapping;
+using TechAssistPro.Ticketing.Events;
+using MediatR;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,9 +38,6 @@ builder.Services.AddDbContext<TicketDbContext>(options =>
             npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "ticketing");
         }));
 
-
-
-
 // --------------------------------------------------
 // 2. Register Repositories
 // --------------------------------------------------
@@ -46,17 +45,34 @@ builder.Services.AddScoped<ITicketRepository, TicketRepository>();
 builder.Services.AddScoped<IResponseFactory, ResponseFactory>();
 builder.Services.AddSingleton<ISchemaRegistry, SchemaRegistry>();
 builder.Services.AddSingleton<IRabbitMQConnection>(sp =>
-    new RabbitMQConnection(builder.Configuration.GetConnectionString("RabbitMQ")!)
-);
+{
+    var logger = sp.GetRequiredService<ILogger<RabbitMQConnection>>();
+    var uri = builder.Configuration.GetConnectionString("RabbitMQ")!;
+
+    return new RabbitMQConnection(uri, logger);
+});
 builder.Services.AddScoped<IEventPublisher, RabbitMqEventPublisher>();
+builder.Services.AddScoped<
+    IEventHandler<TicketCreatedDomainEvent>,
+    TicketCreatedEventHandler>();
+
+
 // --------------------------------------------------
 // 3. MediatR
 // --------------------------------------------------
 // MediatR (correct for MediatR 12+)
 builder.Services.AddMediatR(cfg =>
 {
-    cfg.RegisterServicesFromAssemblyContaining<CreateTicketCommand>();
+    cfg.RegisterServicesFromAssembly(
+        typeof(DomainEventNotificationHandler).Assembly);
+
+    cfg.RegisterServicesFromAssemblyContaining<CreateTicketCommandHandler>();
+    // cfg.RegisterServicesFromAssemblies(
+    //      typeof(CreateTicketCommandHandler).Assembly,     // Application
+    //      typeof(DomainEventNotificationHandler<>).Assembly // Infrastructure
+    //  );
 });
+
 
 // --------------------------------------------------
 // 4. AutoMapper
@@ -95,7 +111,7 @@ var app = builder.Build();
 // Load schemas from files
 var schemaRegistry = app.Services.GetRequiredService<ISchemaRegistry>();
 await schemaRegistry.RegisterSchemaFromFileAsync(
-    "TicketCreatedEvent",
+    "ticket.created",
     1,
     "Schemas/ticket-created-v1.json");
 
