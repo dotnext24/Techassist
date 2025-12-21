@@ -1,8 +1,8 @@
 using TechAssistPro.SharedKernel.Domain;
 using TechAssistPro.Ticketing.Events;
 
-public class Ticket :Entity
-{  
+public class Ticket : AggregateRoot
+{
 
     public string CustomerId { get; private set; } = default!;
     public string Subject { get; private set; } = default!;
@@ -14,11 +14,12 @@ public class Ticket :Entity
     public TicketStatus Status { get; private set; }
 
     public string? AssignedTechnicianId { get; private set; }
-   
+
 
     private Ticket() { } // EF Core uses this
 
     public Ticket(
+        Guid id,
         string customerId,
         string subject,
         string description,
@@ -26,9 +27,10 @@ public class Ticket :Entity
         TicketPriority priority,
         TicketChannel channel)
     {
+        Id = id;
         CustomerId = customerId ?? throw new ArgumentNullException(nameof(customerId));
-        Subject = !string.IsNullOrWhiteSpace(subject) 
-                    ? subject 
+        Subject = !string.IsNullOrWhiteSpace(subject)
+                    ? subject
                     : throw new ArgumentException("Subject is required");
 
         Description = description ?? string.Empty;
@@ -50,19 +52,21 @@ public class Ticket :Entity
     TicketPriority priority,
     TicketChannel channel,
     string createdBy)
-{
-    var ticket = new Ticket(
-        customerId,
-        subject,
-        description,
-        category,
-        priority,
-        channel);
-    ticket.Touch(createdBy);
-    ticket.AddCreatedEvent(); 
+    {
+        Guid id = Guid.NewGuid();
+        var ticket = new Ticket(
+            id,
+            customerId,
+            subject,
+            description,
+            category,
+            priority,
+            channel);
+        ticket.Touch(createdBy);
+        ticket.AddCreatedEvent();
 
-    return ticket;
-}
+        return ticket;
+    }
 
 
     public void Update(string subject, string description, TicketCategory category, TicketPriority priority, string updatedBy)
@@ -74,13 +78,13 @@ public class Ticket :Entity
         Touch(updatedBy);
     }
 
-    public void ChangeStatus(TicketStatus status,string updatedBy)
+    public void ChangeStatus(TicketStatus status, string updatedBy)
     {
         Status = status;
         Touch(updatedBy);
     }
 
-    public void AssignTechnician(string technicianId,string updatedBy)
+    public void AssignTechnician(string technicianId, string updatedBy)
     {
         AssignedTechnicianId = technicianId;
         Touch(updatedBy);
@@ -98,7 +102,7 @@ public class Ticket :Entity
         UpdatedBy = updatedBy;
     }
 
-     private void AddCreatedEvent()
+    private void AddCreatedEvent()
     {
         RaiseDomainEvent(new TicketCreatedDomainEvent(this));
     }

@@ -1,6 +1,7 @@
 using AutoMapper;
 using TechAssistPro.Ticketing.Application.Commands;
 using TechAssistPro.Ticketing.Dtos;
+using TechAssistPro.SharedKernel.Common;
 
 namespace TechAssistPro.Ticketing.Mapping
 {
@@ -9,7 +10,7 @@ namespace TechAssistPro.Ticketing.Mapping
         public TicketMappingProfile()
         {
             CreateMap<Ticket, TicketResponseDto>()
-     .ConstructUsing(t => new TicketResponseDto(
+            .ConstructUsing(t => new TicketResponseDto(
          t.Id,
          t.CustomerId,
          t.Subject,
@@ -25,7 +26,14 @@ namespace TechAssistPro.Ticketing.Mapping
      ));
 
 
-          CreateMap<CreateTicketDto, CreateTicketCommand>();
+            CreateMap<CreateTicketDto, CreateTicketCommand>()
+            .ForCtorParam(nameof(CreateTicketCommand.Category),
+             opt => opt.MapFrom(src => EnumParser.Parse<TicketCategory>(src.Category)))
+            .ForCtorParam(nameof(CreateTicketCommand.Priority),
+             opt => opt.MapFrom(src => EnumParser.Parse<TicketPriority>(src.Priority)))
+            .ForCtorParam(nameof(CreateTicketCommand.Channel),
+             opt => opt.MapFrom(src => EnumParser.Parse<TicketChannel>(src.Channel)));
+
 
             CreateMap<UpdateTicketDto, Ticket>()
                 .ForAllMembers(opts => opts.Ignore()); // updates handled in domain

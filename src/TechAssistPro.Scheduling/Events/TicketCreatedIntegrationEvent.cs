@@ -1,31 +1,14 @@
 using TechAssistPro.SharedKernel.Events;
 
 namespace TechAssistPro.Scheduling.Events;
-public sealed record TicketCreatedIntegrationEvent : IDomainEvent
+public sealed record TicketCreatedIntegrationEvent
 {
     public Guid EventId { get; } = Guid.NewGuid();
     public string EventType => "ticket.created";
     public DateTime OccurredAtUtc { get; } = DateTime.UtcNow;
     public int SchemaVersion => 1;
-
-    public TicketCreatedEventData Data { get; }
-    public TicketCreatedDomainEvent(Ticket ticket)
-    {
-        Data = new TicketCreatedEventData(
-            ticket.Id,
-            ticket.CustomerId,
-            ticket.Subject,
-            ticket.Description,
-            ticket.Category.ToString(),
-            ticket.Priority.ToString(),
-            ticket.Channel.ToString(),
-            ticket.Status.ToString(),
-            ticket.AssignedTechnicianId,
-            ticket.CreatedAtUtc,
-            ticket.UpdatedBy,
-            ticket.LastUpdatedAtUtc
-        );
-    }
+     
+   public TicketCreatedEventData Data { get; init; } = default!;
 }
 
 public sealed record TicketCreatedEventData(

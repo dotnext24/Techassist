@@ -34,15 +34,15 @@ public class TicketValidator : AbstractValidator<CreateTicketDto>
             .WithMessage("Description must be at least 10 characters long.");
 
         RuleFor(t => t.Category)
-            .IsInEnum()
+            .Must(v => Enum.TryParse<TicketCategory>(v, true, out _))
             .WithMessage("Category value is not valid.");
 
         RuleFor(t => t.Priority)
-            .IsInEnum()
+            .Must(v => Enum.TryParse<TicketPriority>(v, true, out _))
             .WithMessage("Priority value is not valid.");
 
         RuleFor(t => t.Channel)
-            .IsInEnum()
+            .Must(v => Enum.TryParse<TicketChannel>(v, true, out _))
             .WithMessage("Channel value is not valid.");
         
     }

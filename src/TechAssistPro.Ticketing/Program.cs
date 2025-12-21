@@ -14,21 +14,22 @@ using TechAssistPro.Ticketing.Application.Validation;
 using TechAssistPro.Ticketing.Data;
 using TechAssistPro.Ticketing.Mapping;
 using TechAssistPro.Ticketing.Events;
-using MediatR;
+using TechAssistPro.Ticketing.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // -----------------------------------------
-// PostgreSQL compatibility switch
+// 1.PostgreSQL compatibility switch
 // -----------------------------------------
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
+
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
-
 builder.Services.Configure<Microsoft.AspNetCore.Mvc.MvcOptions>(o => o.SuppressAsyncSuffixInActionNames = false);
 
 // -----------------------------------------
-// DbContext
+// 2.DbContext
 // -----------------------------------------
 builder.Services.AddDbContext<TicketDbContext>(options =>
     options.UseNpgsql(
@@ -38,12 +39,9 @@ builder.Services.AddDbContext<TicketDbContext>(options =>
             npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "ticketing");
         }));
 
-// --------------------------------------------------
-// 2. Register Repositories
-// --------------------------------------------------
-builder.Services.AddScoped<ITicketRepository, TicketRepository>();
-builder.Services.AddScoped<IResponseFactory, ResponseFactory>();
-builder.Services.AddSingleton<ISchemaRegistry, SchemaRegistry>();
+// -----------------------------------------
+// 3.RabbitMQ Connection Setting
+// -----------------------------------------
 builder.Services.AddSingleton<IRabbitMQConnection>(sp =>
 {
     var logger = sp.GetRequiredService<ILogger<RabbitMQConnection>>();
@@ -51,31 +49,33 @@ builder.Services.AddSingleton<IRabbitMQConnection>(sp =>
 
     return new RabbitMQConnection(uri, logger);
 });
+
+// --------------------------------------------------
+// 4. Register Repositories
+// --------------------------------------------------
+builder.Services.AddScoped<ITicketRepository, TicketRepository>();
+builder.Services.AddScoped<IResponseFactory, ResponseFactory>();
+builder.Services.AddSingleton<ISchemaRegistry, SchemaRegistry>();
+
 builder.Services.AddScoped<IEventPublisher, RabbitMqEventPublisher>();
-builder.Services.AddScoped<
-    IEventHandler<TicketCreatedDomainEvent>,
-    TicketCreatedEventHandler>();
+builder.Services.AddScoped<IEventHandler<TicketCreatedDomainEvent>,TicketCreatedEventHandler>();
 
 
 // --------------------------------------------------
-// 3. MediatR
+// 5. MediatR
 // --------------------------------------------------
-// MediatR (correct for MediatR 12+)
 builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(
         typeof(DomainEventNotificationHandler).Assembly);
 
     cfg.RegisterServicesFromAssemblyContaining<CreateTicketCommandHandler>();
-    // cfg.RegisterServicesFromAssemblies(
-    //      typeof(CreateTicketCommandHandler).Assembly,     // Application
-    //      typeof(DomainEventNotificationHandler<>).Assembly // Infrastructure
-    //  );
+    
 });
 
 
 // --------------------------------------------------
-// 4. AutoMapper
+// 6. AutoMapper
 // --------------------------------------------------
 builder.Services.AddAutoMapper(cfg =>
 {
@@ -85,12 +85,12 @@ builder.Services.AddAutoMapper(cfg =>
 }, typeof(TicketMappingProfile).Assembly);
 
 // --------------------------------------------------
-// 5. FluentValidation
+// 7. FluentValidation
 // --------------------------------------------------
 builder.Services.AddValidatorsFromAssemblyContaining<TicketValidator>();
 
 // --------------------------------------------------
-// 6. JSON Options
+// 8. JSON Options
 // --------------------------------------------------
 builder.Services.Configure<JsonOptions>(options =>
 {
@@ -108,7 +108,9 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Load schemas from files
+// --------------------------------------------------
+// 9. SchemaRegistry for event message contract validation on start
+// --------------------------------------------------
 var schemaRegistry = app.Services.GetRequiredService<ISchemaRegistry>();
 await schemaRegistry.RegisterSchemaFromFileAsync(
     "ticket.created",
@@ -126,12 +128,18 @@ app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
+// --------------------------------------------------
+// 10. Custom Exception Handling Middleware
+// --------------------------------------------------
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 app.MapControllers();
 
 // --------------------------------------------------
-// 10. Minimal API Endpoints (Ticket Endpoints)
+// 11. Minimal API Endpoints (Ticket Endpoints)
 // --------------------------------------------------
 TicketEndpoints.Map(app);
+
 try
 {
     app.Run();

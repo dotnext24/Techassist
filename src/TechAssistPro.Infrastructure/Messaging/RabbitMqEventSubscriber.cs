@@ -50,7 +50,7 @@ namespace TechAssistPro.Infrastructure.Messaging
                 autoDelete: false,
                 arguments: new Dictionary<string, object?>
                 {
-                    { "x-dead-letter-exchange", "ticket.events.dq" }
+                    { "x-dead-letter-exchange", "ticket.events.dlq" }
                 });
 
             foreach (var routingKey in routingKeys)
@@ -67,6 +67,9 @@ namespace TechAssistPro.Infrastructure.Messaging
             {
                 try
                 {
+                    var headers = ea.BasicProperties.Headers;
+                    var schemaVersion = headers!.GetSchemaVersion();
+                    var eventType = ea.BasicProperties.Type!;
                     var json = Encoding.UTF8.GetString(ea.Body.ToArray());
 
                     var message = JsonSerializer.Deserialize<TEvent>(
@@ -75,6 +78,19 @@ namespace TechAssistPro.Infrastructure.Messaging
                         {
                             PropertyNameCaseInsensitive = true
                         })!;
+
+                    // 2. Validate against schema        
+                    var isValid = await _schemaRegistry.ValidateAsync(
+                        eventType,
+                        schemaVersion,
+                        json);
+
+                    if (!isValid)
+                    {
+                        var errorMsg = $"Event {eventType} v{schemaVersion} failed schema validation";
+
+                        throw new InvalidOperationException(errorMsg);
+                    }
 
                     using var scope = _serviceProvider.CreateScope();
 

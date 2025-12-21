@@ -6,6 +6,7 @@ using AutoMapper;
 using MediatR;
 using TechAssistPro.Ticketing.Data;
 using TechAssistPro.Ticketing.Dtos;
+using TechAssistPro.Ticketing.Events;
 
 namespace TechAssistPro.Ticketing.Application.Commands
 {
@@ -14,12 +15,12 @@ namespace TechAssistPro.Ticketing.Application.Commands
     {
         private readonly ITicketRepository _repository;
         private readonly IMapper _mapper;
-         private readonly ILogger<CreateTicketCommandHandler> _logger;
+        private readonly ILogger<CreateTicketCommandHandler> _logger;
         public CreateTicketCommandHandler(ITicketRepository repository, IMapper mapper, ILogger<CreateTicketCommandHandler> logger)
         {
             _repository = repository;
             _mapper = mapper;
-            _logger=logger;
+            _logger = logger;
 
         }
 
@@ -35,10 +36,10 @@ namespace TechAssistPro.Ticketing.Application.Commands
                 request.Category,
                 request.Priority,
                 request.Channel,
-                request.CreatedBy);
+                request.CreatedBy);              
 
             await _repository.AddAsync(ticket, cancellationToken);
-
+            
             return _mapper.Map<TicketResponseDto>(ticket);
         }
     }

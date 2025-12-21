@@ -14,7 +14,7 @@ public static class DomainEventExtensions
         CancellationToken cancellationToken = default)
     {
         var entities = context.ChangeTracker
-            .Entries<Entity>()
+            .Entries<AggregateRoot>()
             .Where(e => e.Entity.DomainEvents.Any())
             .Select(e => e.Entity)
             .ToList();

@@ -25,7 +25,7 @@ namespace TechAssistPro.Ticketing.Events
             {
                 await _eventPublisher.PublishAsync(
                     domainEvent.EventType,
-                    domainEvent.Data,
+                    domainEvent,
                     domainEvent.SchemaVersion,
                     ct);
             }
