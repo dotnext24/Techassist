@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using TechAssistPro.Scheduling.Entities;
 
+namespace TechAssistPro.Scheduling.Data;
 public sealed class SchedulingDbContext : DbContextBase
 {
     public SchedulingDbContext(

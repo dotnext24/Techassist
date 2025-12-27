@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://events.mycompany.com/support-agent-assigned-v1.json",
+  "title": "SupportAgentAssignedDomainEvent",
+  "type": "object",
+
+  "required": [
+    "eventId",
+    "eventType",
+    "occurredAtUtc",
+    "schemaVersion",
+    "data"
+  ],
+
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for this event instance"
+    },
+
+    "eventType": {
+      "type": "string",
+      "const": "support.agent.assigned.v1",
+      "description": "Event name"
+    },
+
+    "occurredAtUtc": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp when the event occurred"
+    },
+
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version for backward compatibility"
+    },
+
+    "data": {
+      "type": "object",
+      "required": [
+        "ticketId",
+        "assignmentId",
+        "supportAgentId",
+        "assignedAtUtc"
+      ],
+
+      "properties": {
+        "ticketId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Associated ticket ID"
+        },
+
+        "assignmentId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Assignment aggregate ID"
+        },
+
+        "supportAgentId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Assigned support agent ID"
+        },
+
+        "assignedAtUtc": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the assignment was created"
+        },
+
+        "updatedBy": {
+          "type": ["string", "null"],
+          "description": "User or system that last updated the assignment"
+        },
+
+        "lastUpdatedAtUtc": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      }
+    }
+  }
+}

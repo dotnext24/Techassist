@@ -1,38 +1,34 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+
+using System.Diagnostics;
 using Microsoft.Extensions.Options;
 using TechAssistPro.Infrastructure.Messaging;
-using TechAssistPro.Scheduling.Events;
+using TechAssistPro.Ticketing.Events;
 
-namespace TechAssistPro.Scheduling.HostedServices
+namespace TechAssistPro.Ticketing.HostedServices
 {
    public sealed class EventSubscriptionHostedService : IHostedService
 {
     private readonly RabbitMqEventSubscriber _subscriber;
     private readonly MessagingOptions _options;
+    private readonly ActivitySource _activitySource;
 
     public EventSubscriptionHostedService(
-        RabbitMqEventSubscriber subscriber,IOptions<MessagingOptions> options)
+        RabbitMqEventSubscriber subscriber,IOptions<MessagingOptions> options,ActivitySource activitySource)
     {
         _subscriber = subscriber;
         _options = options.Value;
+        _activitySource=activitySource;
     }
 
     public async Task StartAsync(CancellationToken ct)
     {
-        var ticketCreatedOptions=_options.Subscriptions["TicketCreated"];
-         await _subscriber.SubscribeAsync<TicketCreatedIntegrationEvent>(
+        var ticketCreatedOptions=_options.Subscriptions["SupportAgentAssigned"];
+         await _subscriber.SubscribeAsync<SupportAgentAssignedIntegrationEvent>(
             queueName: ticketCreatedOptions.QueueName,
             exchangeName:ticketCreatedOptions.ExchangeName,
             schemaVersion:ticketCreatedOptions.SchemaVersion,
             routingKeys: ticketCreatedOptions.RoutingKeys,
             ct);
-        // await _subscriber.SubscribeAsync<TicketCreatedIntegrationEvent>(
-        //     queueName: "ticket.created.q",
-        //     routingKeys: new[] { "ticket.created.v1" },
-        //     ct);
     }
 
     public Task StopAsync(CancellationToken ct) => Task.CompletedTask;

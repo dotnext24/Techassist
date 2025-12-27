@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TechAssistPro.Scheduling.Entities;
 using TechAssistPro.SharedKernel.Pagination;
 
-namespace TechAssistPro.Ticketing.Data
+namespace TechAssistPro.Scheduling.Data
 {
     public class SupportAgentRepository : ISupportAgentRepository
     {
@@ -17,7 +17,7 @@ namespace TechAssistPro.Ticketing.Data
         CancellationToken ct)
         {
             return await _db.SupportAgents
-                .Where(a => a.Availability.IsAvailable)
+                .Where(a => true) //Where(a => a.Availability.IsAvailable)
                 .ToListAsync(ct);
         }
 

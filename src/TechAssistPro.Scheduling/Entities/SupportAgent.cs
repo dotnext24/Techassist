@@ -44,7 +44,7 @@ namespace TechAssistPro.Scheduling.Entities
         }
 
         public bool CanHandle(string category)
-            => Availability.IsAvailable
+            => true //Availability.IsAvailable
                && _skills.Any(s => s.Category == category);
 
         public void Assign()

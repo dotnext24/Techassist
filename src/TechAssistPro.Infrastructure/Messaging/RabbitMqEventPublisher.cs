@@ -6,26 +6,31 @@ using TechAssistPro.Infrastructure.SchemaRegistry;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using MediatR;
-using TechAssistPro.Infrastructure.Events;
+using TechAssistPro.Infrastructure.Observability;
+using Microsoft.Extensions.Options;
+using System.Diagnostics;
 
 namespace TechAssistPro.Infrastructure.Messaging
 {
-    public class RabbitMqEventPublisher 
+    public class RabbitMqEventPublisher
         : IEventPublisher,
-          IAsyncDisposable
+          IAsyncDisposable, IDisposable
     {
         private readonly IRabbitMQConnection _connection;
         private readonly ISchemaRegistry _schemaRegistry;
         private IChannel? _channel;
         private readonly ILogger<RabbitMqEventPublisher> _logger;
-        private readonly SemaphoreSlim _channelLock = new(1, 1);
-        public RabbitMqEventPublisher(IRabbitMQConnection connection, ISchemaRegistry schemaRegistry, ILogger<RabbitMqEventPublisher> logger)
+        private readonly MessagingOptions _options;
+        private readonly ActivitySource _activitySource;
+        public RabbitMqEventPublisher(IRabbitMQConnection connection, ISchemaRegistry schemaRegistry, IOptions<MessagingOptions> options, ILogger<RabbitMqEventPublisher> logger, ActivitySource activitySource)
         {
             _connection = connection;
             _schemaRegistry = schemaRegistry;
             _logger = logger;
+            _options = options.Value;
+            _activitySource = activitySource;
         }
-      
+
 
         public async Task PublishAsync(
             string eventType,
@@ -34,7 +39,13 @@ namespace TechAssistPro.Infrastructure.Messaging
             CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            _logger.LogInformation("RabbitMqEventPublisher Called");
+
+            using var activity = _activitySource.StartActivity("rabbitmq.publish", ActivityKind.Producer);
+            activity?.SetTag("event.type", eventType);
+            activity?.SetTag("schema.version", schemaVersion);
+
+
+            _logger.LogInformation("Rabbitmq publisher -  started. EventType {eventType} | SchemaVersion {schemaVersion}", eventType, schemaVersion);
             // 1. Serialize event data
             string payload = JsonSerializer.Serialize(eventData, new JsonSerializerOptions
             {
@@ -42,15 +53,19 @@ namespace TechAssistPro.Infrastructure.Messaging
                 WriteIndented = false
             });
 
+            _logger.LogInformation($"Rabbitmq publisher - Payload of {eventType}: {payload}");
+
             // 2. Validate against schema        
             var isValid = await _schemaRegistry.ValidateAsync(
                 eventType,
                 schemaVersion,
                 payload);
 
+            activity?.SetTag("schema.valid", isValid);
+
             if (!isValid)
             {
-                var errorMsg = $"Event {eventType} v{schemaVersion} failed schema validation";
+                var errorMsg = $"Rabbitmq publisher - Event {eventType} v{schemaVersion} failed schema validation";
 
                 throw new InvalidOperationException(errorMsg);
             }
@@ -58,7 +73,7 @@ namespace TechAssistPro.Infrastructure.Messaging
             _channel = await _connection.CreateChannelAsync();
             // 3. ExchangeDeclare
 
-            await _channel.ExchangeDeclareAsync("ticket.events", ExchangeType.Topic, durable: true);
+            await _channel.ExchangeDeclareAsync(_options.ExchangeName, ExchangeType.Topic, durable: true);
 
             // 4. Publish to RabbitMQ
             var body = Encoding.UTF8.GetBytes(payload);
@@ -76,16 +91,33 @@ namespace TechAssistPro.Infrastructure.Messaging
                 { "event-type", eventType },
                 { "schema-version", schemaVersion },
                 { "schema-validated", true },
-                { "published-at", DateTime.UtcNow.ToString("O") }
+                { "published-at", DateTime.UtcNow.ToString("O") },
+                { "traceparent",Activity.Current?.Id}
             }
             };
 
+            _logger.LogInformation("📤 Rabbitmq publisher - Publishing - IntegrationEvent {eventType} | Exchange={Exchange} | RoutingKey={RoutingKey} | EventType={EventType} | SchemaVersion={SchemaVersion} | MessageId={MessageId}",
+                  eventType,
+                  _options.ExchangeName,
+                  $"{eventType}.v{schemaVersion}",
+                  eventType,
+                  schemaVersion,
+                  eventId);
+
             await _channel.BasicPublishAsync(
-                 exchange: "ticket.events",
+                 exchange: _options.ExchangeName,
                  routingKey: $"{eventType}.v{schemaVersion}",
                  mandatory: false,
                  basicProperties: properties,
                  body: body);
+
+            _logger.LogInformation("✅ Rabbitmq publisher - Published - IntegrationEvent {eventType} | Exchange={Exchange} | RoutingKey={RoutingKey} | MessageId={MessageId}",
+                 eventType,
+                 _options.ExchangeName,
+                 $"{eventType}.v{schemaVersion}",
+                 eventId);
+
+            activity?.SetStatus(ActivityStatusCode.Ok);
         }
 
         public async ValueTask DisposeAsync()
@@ -96,6 +128,11 @@ namespace TechAssistPro.Infrastructure.Messaging
                 await _channel.DisposeAsync();
             }
         }
+
+        public void Dispose()
+        => DisposeAsync().AsTask().GetAwaiter().GetResult();
+
+
     }
 
 

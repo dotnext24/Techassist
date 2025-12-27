@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using TechAssistPro.Infrastructure.Messaging;
 using TechAssistPro.Infrastructure.SchemaRegistry;
+using TechAssistPro.Scheduling.Data;
 using TechAssistPro.Scheduling.DependencyInjection;
 using TechAssistPro.Scheduling.Middleware;
 
@@ -40,11 +42,14 @@ builder.Services.AddSingleton<IRabbitMQConnection>(sp =>
     return new RabbitMQConnection(uri, logger);
 });
 
+builder.Services.Configure<MessagingOptions>(
+    builder.Configuration.GetSection("Messaging"));
+
+
 // -----------------------------------------
 // 4. Application Services
 // -----------------------------------------
 builder.Services.AddServices(builder.Configuration);
-
 
 
 builder.Services.AddControllers();
@@ -62,6 +67,10 @@ await schemaRegistry.RegisterSchemaFromFileAsync(
     "ticket.created",
     1,
     "Schemas/ticket-created-v1.json");
+await schemaRegistry.RegisterSchemaFromFileAsync(
+    "support.agent.assigned",
+    1,
+    "Schemas/support-agent-assigned-v1.json");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

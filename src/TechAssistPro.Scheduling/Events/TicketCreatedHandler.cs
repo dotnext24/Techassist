@@ -12,8 +12,8 @@ public sealed class TicketCreatedHandler
     : IIntegrationEventHandler<TicketCreatedIntegrationEvent>
 {
     private readonly ILogger<TicketCreatedHandler> _logger;
-private readonly IMediator _mediator;
-    public TicketCreatedHandler(IMediator mediator,ILogger<TicketCreatedHandler> logger)
+    private readonly IMediator _mediator;
+    public TicketCreatedHandler(IMediator mediator, ILogger<TicketCreatedHandler> logger)
     {
         _mediator = mediator;
         _logger = logger;
@@ -28,9 +28,9 @@ private readonly IMediator _mediator;
             @event.Data.TicketId);
 
         await _mediator.Send(
-            new AutoAssignSupportAgentCommand(@event.Data.TicketId,@event.Data.Category,@event.Data.Priority),
+            new AutoAssignSupportAgentCommand(@event.Data.TicketId, @event.Data.Category, @event.Data.Priority),
             ct);
-        
+
     }
 }
 

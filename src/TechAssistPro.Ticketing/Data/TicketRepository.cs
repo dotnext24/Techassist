@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using TechAssistPro.SharedKernel.Pagination;
 
@@ -10,10 +7,13 @@ namespace TechAssistPro.Ticketing.Data
     public class TicketRepository : ITicketRepository
     {
         private readonly TicketDbContext _db;
-
-        public TicketRepository(TicketDbContext db)
+        private readonly ActivitySource _activitySource;
+        private readonly ILogger<TicketRepository> _logger;
+        public TicketRepository(TicketDbContext db, ActivitySource activitySource, ILogger<TicketRepository> logger)
         {
             _db = db;
+            _activitySource = activitySource;
+            _logger = logger;
         }
 
         public async Task<Ticket?> GetByIdAsync(Guid id, CancellationToken ct)
@@ -50,8 +50,38 @@ namespace TechAssistPro.Ticketing.Data
 
         public async Task AddAsync(Ticket ticket, CancellationToken ct)
         {
-            await _db.Tickets.AddAsync(ticket, ct);
-            await _db.SaveChangesAsync(ct);
+
+            using var activity = _activitySource.StartActivity("AddTicket");
+            activity?.SetTag("db.operation", "INSERT");
+            activity?.SetTag("entity", "Ticket");
+            activity?.SetTag("customer.id", ticket.CustomerId);
+
+            _logger.LogInformation("AddTicket started | CustomerId={CustomerId}", ticket.CustomerId);
+            var stopwatch = Stopwatch.StartNew();
+            try
+            {
+                await _db.Tickets.AddAsync(ticket, ct);
+                await _db.SaveChangesAsync(ct);
+
+                stopwatch.Stop();
+                activity?.SetTag("ticket.id", ticket.Id);
+                activity?.SetTag("db.duration_ms", stopwatch.ElapsedMilliseconds);
+                activity?.SetStatus(ActivityStatusCode.Ok);
+
+                _logger.LogInformation("Ticket persisted to database | TicketId={TicketId} | {Duration}ms", ticket.Id, stopwatch.ElapsedMilliseconds);
+            }
+            catch (Exception ex)
+            {
+                activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                activity?.AddException(ex);
+                _logger.LogError(
+                    ex,
+                    "Database error persisting ticket {CustomerId}",
+                    ticket.CustomerId);
+
+                throw;
+            }
+
         }
 
         public async Task UpdateAsync(Ticket ticket, CancellationToken ct)

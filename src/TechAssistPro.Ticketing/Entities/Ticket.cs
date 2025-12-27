@@ -84,7 +84,7 @@ public class Ticket : AggregateRoot
         Touch(updatedBy);
     }
 
-    public void AssignTechnician(string technicianId, string updatedBy)
+    public void AssignSupportAgent(string technicianId, string updatedBy)
     {
         AssignedTechnicianId = technicianId;
         Touch(updatedBy);

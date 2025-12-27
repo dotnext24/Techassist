@@ -3,7 +3,7 @@ using AutoMapper;
 using MediatR;
 using TechAssistPro.Scheduling.Entities;
 using TechAssistPro.Scheduling.Services;
-using TechAssistPro.Ticketing.Data;
+using TechAssistPro.Scheduling.Data;
 
 
 namespace TechAssistPro.Scheduling.Application.Commands
@@ -23,7 +23,6 @@ namespace TechAssistPro.Scheduling.Application.Commands
             _matcher = matcher;
             _mapper = mapper;
             _logger = logger;
-
         }
 
         public async Task<bool> Handle(

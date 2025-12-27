@@ -1,3 +1,4 @@
+using TechAssistPro.Infrastructure.Observability;
 using TechAssistPro.SharedKernel.Exceptions;
 using TechAssistPro.SharedKernel.Responses;
 
@@ -23,10 +24,13 @@ public sealed class ExceptionHandlingMiddleware
         }
         catch (NotFoundException ex)
         {
-             var body = responder.Error(new
+            _logger.LogError(ex, "NotFoundException exception for {Path} | CorrelationId={CorrelationId}", context.Request.Path, CorrelationContext.CorrelationId);
+
+
+            var body = responder.Error(new
             {
                 message = ex.Message,
-                traceId = context.TraceIdentifier
+                correlationId = CorrelationContext.CorrelationId
             });
             var result = Results.NotFound(body);
             context.Response.ContentType = "application/json";
@@ -34,7 +38,7 @@ public sealed class ExceptionHandlingMiddleware
         }
         catch (FluentValidation.ValidationException ex)
         {
-            _logger.LogWarning(ex, "Validation error for {Path}", context.Request.Path);
+            _logger.LogError(ex, "Validation error for {Path} | CorrelationId={CorrelationId}", context.Request.Path, CorrelationContext.CorrelationId);
             var errors = ex.Errors
                 .GroupBy(e => e.PropertyName)
                 .ToDictionary(
@@ -50,13 +54,13 @@ public sealed class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception for {Path}", context.Request.Path);
+            _logger.LogError(ex, "Unhandled exception for {Path} | CorrelationId={CorrelationId}", context.Request.Path, CorrelationContext.CorrelationId);
 
 
             var body = responder.Error(new
             {
                 message = "An unexpected error occurred.",
-                traceId = context.TraceIdentifier
+                correlationId = CorrelationContext.CorrelationId
             });
             var result = Results.Json(data: body, statusCode: StatusCodes.Status500InternalServerError);
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;

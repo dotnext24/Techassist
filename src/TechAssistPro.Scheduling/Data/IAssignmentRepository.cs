@@ -2,7 +2,7 @@ using TechAssistPro.Scheduling.Entities;
 using TechAssistPro.Scheduling.Enums;
 using TechAssistPro.SharedKernel.Pagination;
 
-namespace TechAssistPro.Ticketing.Data
+namespace TechAssistPro.Scheduling.Data
 {
     public interface IAssignmentRepository
     {

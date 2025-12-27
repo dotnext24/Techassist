@@ -15,6 +15,17 @@ using TechAssistPro.Ticketing.Data;
 using TechAssistPro.Ticketing.Mapping;
 using TechAssistPro.Ticketing.Events;
 using TechAssistPro.Ticketing.Middleware;
+using TechAssistPro.Ticketing.HostedServices;
+using Microsoft.AspNetCore.Rewrite;
+
+
+using OpenTelemetry.Trace;
+using Serilog;
+using Serilog.Sinks.Grafana.Loki;
+using TechAssistPro.Infrastructure.Observability;
+using TechAssistPro.Ticketing.DependencyInjection;
+using OpenTelemetry.Resources;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,9 +34,42 @@ var builder = WebApplication.CreateBuilder(args);
 // -----------------------------------------
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
+// Configure Serilog with Loki
+builder.AddLogger();
+builder.AddTracing();
 
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
+
+// Configure OpenTelemetry with Jaeger
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracerProviderBuilder =>
+    {
+        tracerProviderBuilder
+            .SetResourceBuilder(ResourceBuilder.CreateDefault()
+                .AddService("TechAssistPro.Ticketing")
+                .AddAttributes(new Dictionary<string, object>
+                {
+                    ["environment"] = builder.Environment.EnvironmentName
+                }))
+                .AddSource("TechAssistPro.Ticketing")
+            .AddAspNetCoreInstrumentation(options =>
+            {
+                options.RecordException = true;
+            })
+            .AddHttpClientInstrumentation()
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://172.232.102.50:4317");
+                options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+            })
+             .AddConsoleExporter();
+
+    });
+
+
+
+
+
+
 builder.Services.Configure<Microsoft.AspNetCore.Mvc.MvcOptions>(o => o.SuppressAsyncSuffixInActionNames = false);
 
 // -----------------------------------------
@@ -37,7 +81,8 @@ builder.Services.AddDbContext<TicketDbContext>(options =>
         npgsqlOptions =>
         {
             npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "ticketing");
-        }));
+        })
+        );
 
 // -----------------------------------------
 // 3.RabbitMQ Connection Setting
@@ -50,6 +95,9 @@ builder.Services.AddSingleton<IRabbitMQConnection>(sp =>
     return new RabbitMQConnection(uri, logger);
 });
 
+builder.Services.Configure<MessagingOptions>(
+    builder.Configuration.GetSection("Messaging"));
+
 // --------------------------------------------------
 // 4. Register Repositories
 // --------------------------------------------------
@@ -58,7 +106,26 @@ builder.Services.AddScoped<IResponseFactory, ResponseFactory>();
 builder.Services.AddSingleton<ISchemaRegistry, SchemaRegistry>();
 
 builder.Services.AddScoped<IEventPublisher, RabbitMqEventPublisher>();
-builder.Services.AddScoped<IEventHandler<TicketCreatedDomainEvent>,TicketCreatedEventHandler>();
+builder.Services.AddScoped<IEventHandler<TicketCreatedDomainEvent>, TicketCreatedEventHandler>();
+
+
+
+// -----------------------------
+// Integration Event Handlers
+// -----------------------------
+builder.Services.AddScoped<IIntegrationEventHandler<SupportAgentAssignedIntegrationEvent>, SupportAgentAssignedHandler>();
+
+
+
+// -----------------------------
+// RabbitMQ Subscriber
+// -----------------------------
+builder.Services.AddSingleton<RabbitMqEventSubscriber>();
+
+// -----------------------------
+// Hosted Services
+// -----------------------------
+builder.Services.AddHostedService<EventSubscriptionHostedService>();
 
 
 // --------------------------------------------------
@@ -70,8 +137,10 @@ builder.Services.AddMediatR(cfg =>
         typeof(DomainEventNotificationHandler).Assembly);
 
     cfg.RegisterServicesFromAssemblyContaining<CreateTicketCommandHandler>();
-    
+    cfg.RegisterServicesFromAssemblyContaining<SupportAgentAssignedHandler>();
+
 });
+
 
 
 // --------------------------------------------------
@@ -116,6 +185,10 @@ await schemaRegistry.RegisterSchemaFromFileAsync(
     "ticket.created",
     1,
     "Schemas/ticket-created-v1.json");
+await schemaRegistry.RegisterSchemaFromFileAsync(
+    "support.agent.assigned",
+    1,
+    "Schemas/support-agent-assigned-v1.json");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -126,12 +199,21 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+//Redirect to api doc
+var option = new RewriteOptions();
+option.AddRedirect("^$", "swagger");
+app.UseRewriter(option);
+
 app.UseAuthorization();
 
 // --------------------------------------------------
 // 10. Custom Exception Handling Middleware
 // --------------------------------------------------
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+
+// Add Serilog request logging
+app.UseRequestLogging();
 
 app.MapControllers();
 
@@ -143,6 +225,7 @@ TicketEndpoints.Map(app);
 try
 {
     app.Run();
+    
 }
 catch (Exception ex)
 {

@@ -23,6 +23,24 @@ namespace TechAssistPro.Infrastructure.Messaging
                 $"Unsupported schema version header type: {value.GetType()}")
         };
     }
+
+     public static string GetTraceParent(
+        this IDictionary<string, object> headers)
+    {
+        if (!headers.TryGetValue("trace-parent", out var value))
+            throw new InvalidOperationException("Trace parent header missing");
+
+        return value.ToString()!;
+    }
+
+     public static string GetCorrelationId(
+        this IDictionary<string, object> headers)
+    {
+        if (!headers.TryGetValue("correlation-id", out var value))
+            throw new InvalidOperationException("Correlation id header missing");
+
+        return value.ToString()!;
+    }
 }
 
 }

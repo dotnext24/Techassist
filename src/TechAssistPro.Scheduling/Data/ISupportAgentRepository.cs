@@ -1,7 +1,7 @@
 using TechAssistPro.Scheduling.Entities;
 using TechAssistPro.SharedKernel.Pagination;
 
-namespace TechAssistPro.Ticketing.Data
+namespace TechAssistPro.Scheduling.Data
 {
     public interface ISupportAgentRepository
     {

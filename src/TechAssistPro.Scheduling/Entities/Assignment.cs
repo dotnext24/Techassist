@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using TechAssistPro.Scheduling.Enums;
+using TechAssistPro.Scheduling.Events;
 using TechAssistPro.SharedKernel.Domain;
 using TechAssistPro.SharedKernel.Exceptions;
 
@@ -44,6 +45,7 @@ namespace TechAssistPro.Scheduling.Entities
 
             assignment.Touch(createdBy);
             // Raise domain events if any
+            assignment.AddCreatedEvent();
 
             return assignment;
         }
@@ -94,8 +96,8 @@ namespace TechAssistPro.Scheduling.Entities
 
         private void AddCreatedEvent()
         {
-            // RaiseDomainEvent(
-            //     new AssignmentCreatedDomainEvent(this));
+            RaiseDomainEvent(
+                new SupportAgentAssignedDomainEvent(this));
         }
     }
 
