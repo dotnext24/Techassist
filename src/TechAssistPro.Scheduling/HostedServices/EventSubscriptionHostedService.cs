@@ -29,10 +29,7 @@ namespace TechAssistPro.Scheduling.HostedServices
             schemaVersion:ticketCreatedOptions.SchemaVersion,
             routingKeys: ticketCreatedOptions.RoutingKeys,
             ct);
-        // await _subscriber.SubscribeAsync<TicketCreatedIntegrationEvent>(
-        //     queueName: "ticket.created.q",
-        //     routingKeys: new[] { "ticket.created.v1" },
-        //     ct);
+       
     }
 
     public Task StopAsync(CancellationToken ct) => Task.CompletedTask;

@@ -27,7 +27,7 @@ namespace TechAssistPro.Infrastructure.Messaging
      public static string GetTraceParent(
         this IDictionary<string, object> headers)
     {
-        if (!headers.TryGetValue("trace-parent", out var value))
+        if (!headers.TryGetValue("traceparent", out var value))
             throw new InvalidOperationException("Trace parent header missing");
 
         return value.ToString()!;
@@ -36,7 +36,7 @@ namespace TechAssistPro.Infrastructure.Messaging
      public static string GetCorrelationId(
         this IDictionary<string, object> headers)
     {
-        if (!headers.TryGetValue("correlation-id", out var value))
+        if (!headers.TryGetValue("correlation.id", out var value))
             throw new InvalidOperationException("Correlation id header missing");
 
         return value.ToString()!;

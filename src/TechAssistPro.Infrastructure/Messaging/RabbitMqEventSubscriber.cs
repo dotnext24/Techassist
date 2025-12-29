@@ -108,7 +108,7 @@ namespace TechAssistPro.Infrastructure.Messaging
                     var correlationId = headers!.GetCorrelationId();
 
                     activity?.AddTag("trace-parent", traceParent);
-                    activity?.AddTag("correlation-id", correlationId);
+                    activity?.AddTag("correlation.id", correlationId);
 
                     var json = Encoding.UTF8.GetString(ea.Body.ToArray());
 

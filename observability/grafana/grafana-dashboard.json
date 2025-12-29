@@ -1,0 +1,116 @@
+{
+  "id": null,
+  "uid": "loki-logs-dashboard",
+  "title": "Loki Logs - TechAssistPro",
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "10s",
+  "tags": ["loki", "logs", "observability"],
+  "templating": {
+    "list": [
+      {
+        "name": "app",
+        "type": "query",
+        "datasource": "Loki",
+        "refresh": 1,
+        "query": {
+          "query": "label_values(app)",
+          "refId": "LokiApp"
+        },
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "logs",
+      "title": "Live Application Logs",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 9 },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "{app=~\"$app\"}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "showLabels": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      }
+    },
+    {
+      "type": "logs",
+      "title": "Error Logs",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 7 },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "{app=~\"$app\"} |= \"ERROR\"",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "showLabels": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Log Volume (per minute)",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 6 },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "count_over_time({app=~\"$app\"}[1m])",
+          "refId": "C"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Error Rate (per minute)",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 6 },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "count_over_time({app=~\"$app\"} |= \"ERROR\" [1m])",
+          "refId": "D"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      }
+    },
+    {
+      "type": "table",
+      "title": "Top Error Messages (Last 5m)",
+      "gridPos": { "x": 0, "y": 22, "w": 24, "h": 7 },
+      "datasource": "Loki",
+      "targets": [
+        {
+          "expr": "topk(10, count_over_time({app=~\"$app\"} |= \"ERROR\" [5m]))",
+          "refId": "E"
+        }
+      ],
+      "options": {
+        "showHeader": true
+      }
+    }
+  ]
+}

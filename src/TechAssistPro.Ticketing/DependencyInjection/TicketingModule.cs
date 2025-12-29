@@ -1,154 +1,219 @@
-
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using FluentValidation;
+using Microsoft.AspNetCore.Http.Json;
+using Microsoft.AspNetCore.Rewrite;
+using Microsoft.EntityFrameworkCore;
+using TechAssistPro.Infrastructure.Events;
 using TechAssistPro.Infrastructure.Messaging;
 using TechAssistPro.Infrastructure.SchemaRegistry;
 using TechAssistPro.SharedKernel.Events;
-using TechAssistPro.Infrastructure.Events;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
-using TechAssistPro.Infrastructure.Observability;
-using System.Diagnostics;
-using OpenTelemetry.Logs;
-using Serilog;
-using Serilog.Sinks.Grafana.Loki;
+using TechAssistPro.SharedKernel.Responses;
+using TechAssistPro.Ticketing.Application.Commands;
+using TechAssistPro.Ticketing.Application.Validation;
+using TechAssistPro.Ticketing.Data;
+using TechAssistPro.Ticketing.Events;
+using TechAssistPro.Ticketing.HostedServices;
+using TechAssistPro.Ticketing.Mapping;
+using TechAssistPro.Ticketing.Middleware;
 
 
 namespace TechAssistPro.Ticketing.DependencyInjection
 {
     public static class TicketingModule
     {
-        public static IServiceCollection AddServices(
-         this IServiceCollection services,
-         IConfiguration configuration)
-        {
-            return services;
-        }
-
-
-        public static WebApplicationBuilder AddLogger(
-            this WebApplicationBuilder builder)
-        {
-            var otel = builder.Configuration.GetSection("OpenTelemetry");
-            string? lokiUrl= otel["Loki:Url"] ?? "http://localhost:3100";
-            string? appName= otel["ServiceName"] ?? "TechAssistPro.Ticketing";
-
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Information()
-                .MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning)
-                .Enrich.FromLogContext()
-                .Enrich.WithProperty("Application", appName)
-                .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
-                .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
-                .WriteTo.GrafanaLoki(
-                    lokiUrl,
-                    labels: new[]
-                    {
-                    new LokiLabel { Key = "app", Value = appName.ToLowerInvariant().Replace(" ", "-") },
-                    new LokiLabel { Key = "environment", Value = builder.Environment.EnvironmentName.ToLowerInvariant() }
-                    })
-                .CreateLogger();
-
-            builder.Host.UseSerilog();
-
-            return builder;
-        }
-
-
-        public static WebApplication UseRequestLogging(this WebApplication app)
-        {
-            app.UseSerilogRequestLogging(options =>
-            {
-                options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
-                {
-                    diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
-                    diagnosticContext.Set("RequestScheme", httpContext.Request.Scheme);
-                    diagnosticContext.Set("RemoteIP", httpContext.Connection.RemoteIpAddress?.ToString());
-                    diagnosticContext.Set("UserAgent", httpContext.Request.Headers.UserAgent.ToString());
-                    diagnosticContext.Set("RequestId", httpContext.TraceIdentifier);
-                };
-
-                options.MessageTemplate =
-                    "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
-            });
-
-            return app;
-        }
-
-
-         public static WebApplicationBuilder AddTracing(
-        this WebApplicationBuilder builder)
+      public static IServiceCollection AddInfrastructure(this WebApplicationBuilder builder)
     {
-        var otel = builder.Configuration.GetSection("OpenTelemetry");
-        string? serviceName = otel["ServiceName"] ?? "TechAssistPro.Ticketing";
-        string[]? activitySources= new[] { serviceName };
+        var services = builder.Services;
+        var config = builder.Configuration;
 
-        var otlpEndpoint = otel["Otlp:Endpoint"] 
-            ?? "";
-       
-        var activitySource = new ActivitySource(serviceName);
-        builder.Services.AddSingleton(activitySource);
+        ConfigurePostgreSQL(services, config);
+        ConfigureRabbitMQ(services, config);
+        RegisterRepositories(services);
+        RegisterEventHandlers(services);
+        RegisterHostedServices(services);
 
-        builder.Services.AddOpenTelemetry()
-            .WithTracing(tracerProviderBuilder =>
-            {
-                tracerProviderBuilder
-                    .SetResourceBuilder(ResourceBuilder.CreateDefault()
-                        .AddService(serviceName)
-                        .AddAttributes(new Dictionary<string, object>
-                        {
-                            ["environment"] = builder.Environment.EnvironmentName,
-                            
-                        }))
-                    .AddSource(activitySources)
-                    .AddAspNetCoreInstrumentation(options =>
-                    {
-                        options.RecordException = true;
-                        options.EnrichWithHttpRequest = (activity, request) =>
-                        {
-                            activity.SetTag("http.request_content_length", request.ContentLength);
-                            activity.SetTag("http.request_content_type", request.ContentType);
-                        };
-                        options.EnrichWithHttpResponse = (activity, response) =>
-                        {
-                            activity.SetTag("http.response_content_length", response.ContentLength);
-                            activity.SetTag("http.response_content_type", response.ContentType);
-                        };
-                    })
-                    .AddHttpClientInstrumentation(options =>
-                    {
-                        options.RecordException = true;
-                        options.EnrichWithHttpRequestMessage = (activity, request) =>
-                        {
-                            activity.SetTag("http.request.method", request.Method.ToString());
-                        };
-                    })
-                    .AddEntityFrameworkCoreInstrumentation(options =>
-                        {
-                            if (otel.GetValue<bool>("Database:CaptureSql"))
-                            {
-                                options.EnrichWithIDbCommand = (activity, command) =>
-                                {
-                                    if (activity == null || command == null)
-                                        return;
-
-                                    activity.SetTag("db.system", "postgresql");
-                                    activity.SetTag("db.statement", command.CommandText);
-                                };
-                            }
-                    })
-                    .AddOtlpExporter(options =>
-                    {
-                        options.Endpoint = new Uri(otlpEndpoint);
-                        options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
-                    });
-
-                if (builder.Environment.IsDevelopment())
-                {
-                    tracerProviderBuilder.AddConsoleExporter();
-                }
-            });
-
-        return builder;
+        return services;
     }
 
+    public static IServiceCollection AddApplication(this WebApplicationBuilder builder)
+    {
+        var services = builder.Services;
+
+        ConfigureMediatR(services);
+        ConfigureAutoMapper(services);
+        ConfigureFluentValidation(services);
+
+        return services;
+    }
+
+    public static IServiceCollection AddApi(this WebApplicationBuilder builder)
+    {
+        var services = builder.Services;
+
+        ConfigureMvcOptions(services);
+        ConfigureJsonOptions(services);
+        services.AddControllers();
+        services.AddEndpointsApiExplorer();
+        ConfigureSwagger(services);
+
+        return services;
+    }
+
+    public static async Task InitializeSchemaRegistryAsync(this WebApplication app)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+        try
+        {
+            logger.LogInformation("Initializing Schema Registry");
+
+            var schemaRegistry = app.Services.GetRequiredService<ISchemaRegistry>();
+
+            await schemaRegistry.RegisterSchemaFromFileAsync(
+                "ticket.created", 1, "Schemas/ticket-created-v1.json");
+
+            await schemaRegistry.RegisterSchemaFromFileAsync(
+                "support.agent.assigned", 1, "Schemas/support-agent-assigned-v1.json");
+
+            logger.LogInformation("Schema Registry initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to initialize Schema Registry");
+            throw;
+        }
+    }
+
+    public static WebApplication ConfigureMiddleware(this WebApplication app)
+    {
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseSwagger();
+            app.UseSwaggerUI();
+        }
+
+        app.UseHttpsRedirection();
+        app.UseRewriter(new RewriteOptions().AddRedirect("^$", "swagger"));
+        app.UseAuthorization();
+        app.UseMiddleware<ExceptionHandlingMiddleware>();
+        app.UseMiddleware<CorrelationIdMiddleware>();
+        app.UseRequestLogging();
+
+        return app;
+    }
+
+    #region Private Configuration Methods
+
+    private static void ConfigurePostgreSQL(IServiceCollection services, IConfiguration config)
+    {
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
+        services.AddDbContext<TicketDbContext>(options =>
+            options.UseNpgsql(
+                config.GetConnectionString("TechAssistDb"),
+                npgsqlOptions =>
+                {
+                    npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "ticketing");
+                    npgsqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 3,
+                        maxRetryDelay: TimeSpan.FromSeconds(5),
+                        errorCodesToAdd: null);
+                }));
+    }
+
+    private static void ConfigureRabbitMQ(IServiceCollection services, IConfiguration config)
+    {
+        services.AddSingleton<IRabbitMQConnection>(sp =>
+        {
+            var logger = sp.GetRequiredService<ILogger<RabbitMQConnection>>();
+            var uri = config.GetConnectionString("RabbitMQ") 
+                ?? throw new InvalidOperationException("RabbitMQ connection string is missing");
+            
+            return new RabbitMQConnection(uri, logger);
+        });
+
+        services.Configure<MessagingOptions>(config.GetSection("Messaging"));
+        services.AddSingleton<RabbitMqEventSubscriber>();
+    }
+
+    private static void RegisterRepositories(IServiceCollection services)
+    {
+        services.AddScoped<ITicketRepository, TicketRepository>();
+        services.AddScoped<IResponseFactory, ResponseFactory>();
+        services.AddSingleton<ISchemaRegistry, SchemaRegistry>();
+    }
+
+    private static void RegisterEventHandlers(IServiceCollection services)
+    {
+        services.AddScoped<IEventPublisher, RabbitMqEventPublisher>();
+        services.AddScoped<IEventHandler<TicketCreatedDomainEvent>, TicketCreatedEventHandler>();
+        services.AddScoped<IIntegrationEventHandler<SupportAgentAssignedIntegrationEvent>,
+            SupportAgentAssignedHandler>();
+    }
+
+    private static void RegisterHostedServices(IServiceCollection services)
+    {
+        services.AddHostedService<EventSubscriptionHostedService>();
+    }
+
+    private static void ConfigureMediatR(IServiceCollection services)
+    {
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssembly(typeof(DomainEventNotificationHandler).Assembly);
+            cfg.RegisterServicesFromAssemblyContaining<CreateTicketCommandHandler>();
+            cfg.RegisterServicesFromAssemblyContaining<SupportAgentAssignedHandler>();
+        });
+    }
+
+    private static void ConfigureAutoMapper(IServiceCollection services)
+    {
+        services.AddAutoMapper(cfg =>
+        {
+            cfg.AllowNullCollections = true;
+        }, typeof(TicketMappingProfile).Assembly);
+    }
+
+    private static void ConfigureFluentValidation(IServiceCollection services)
+    {
+        services.AddValidatorsFromAssemblyContaining<TicketValidator>();
+    }
+
+    private static void ConfigureMvcOptions(IServiceCollection services)
+    {
+        services.Configure<Microsoft.AspNetCore.Mvc.MvcOptions>(options =>
+        {
+            options.SuppressAsyncSuffixInActionNames = false;
+        });
+    }
+
+    private static void ConfigureJsonOptions(IServiceCollection services)
+    {
+        services.Configure<JsonOptions>(options =>
+        {
+            options.SerializerOptions.WriteIndented = true;
+            options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            options.SerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        });
+    }
+
+    private static void ConfigureSwagger(IServiceCollection services)
+    {
+        services.AddSwaggerGen(options =>
+        {
+            options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+            {
+                Title = "TechAssistPro Ticketing API",
+                Version = "v1",
+                Description = "API for managing support tickets"
+            });
+        });
+    }
+
+    #endregion
 }
+
+
 }

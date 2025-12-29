@@ -35,8 +35,10 @@ namespace TechAssistPro.Ticketing.Application.Commands
 
             using var activity = _activitySource.StartActivity("Create-Ticket");
             activity?.SetTag("customer.id", request.CustomerId);
-
+            activity?.SetTag("correlation.id", CorrelationContext.CorrelationId);
+            
             _logger.LogInformation("Create-Ticket started | CustomerId={CustomerId}", request.CustomerId);
+            
             try
             {
                 var ticket = Ticket.Create(

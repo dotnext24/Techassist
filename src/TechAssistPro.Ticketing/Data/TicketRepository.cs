@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using TechAssistPro.Infrastructure.Observability;
 using TechAssistPro.SharedKernel.Pagination;
 
 namespace TechAssistPro.Ticketing.Data
@@ -55,6 +56,7 @@ namespace TechAssistPro.Ticketing.Data
             activity?.SetTag("db.operation", "INSERT");
             activity?.SetTag("entity", "Ticket");
             activity?.SetTag("customer.id", ticket.CustomerId);
+            activity?.SetTag("correlation.id", CorrelationContext.CorrelationId);
 
             _logger.LogInformation("AddTicket started | CustomerId={CustomerId}", ticket.CustomerId);
             var stopwatch = Stopwatch.StartNew();

@@ -30,12 +30,13 @@ public sealed class SupportAgentAssignedHandler
         activity?.SetTag("event-type", @event.EventType);
 
         _logger.LogInformation("🎯 Support-Agent-Assigned-Event started | TicketId={TicketId}", @event.Data.TicketId);
-        activity?.SetStatus(ActivityStatusCode.Ok);
+
         try
         {
             await _mediator.Send(
                 new AssignSupportAgentCommand(@event.Data.TicketId, @event.Data.AssignmentId, @event.Data.SupportAgentId),
                 ct);
+            activity?.SetStatus(ActivityStatusCode.Ok);
         }
         catch (Exception ex)
         {

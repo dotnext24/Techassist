@@ -1,97 +1,51 @@
-using Microsoft.AspNetCore.Rewrite;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using TechAssistPro.Infrastructure.Messaging;
-using TechAssistPro.Infrastructure.SchemaRegistry;
-using TechAssistPro.Scheduling.Data;
+using Serilog;
 using TechAssistPro.Scheduling.DependencyInjection;
-using TechAssistPro.Scheduling.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// -----------------------------------------
-// 1.PostgreSQL compatibility switch
-// -----------------------------------------
-AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+// Observability: Logging & Tracing
+builder.AddLogger();
+builder.AddTracing();
 
 
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Services.Configure<Microsoft.AspNetCore.Mvc.MvcOptions>(o => o.SuppressAsyncSuffixInActionNames = false);
+// Infrastructure: Database, Messaging, Repositories, Services
+builder.AddInfrastructure();
 
 
-// -----------------------------------------
-// 2.DbContext
-// -----------------------------------------
-builder.Services.AddDbContext<SchedulingDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("TechAssistDb"),
-        npgsqlOptions =>
-        {
-            npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "scheduling");
-        }));
-
-// -----------------------------------------
-// 3.RabbitMQ Connection Setting
-// -----------------------------------------
-builder.Services.AddSingleton<IRabbitMQConnection>(sp =>
-{
-    var logger = sp.GetRequiredService<ILogger<RabbitMQConnection>>();
-    var uri = builder.Configuration.GetConnectionString("RabbitMQ")!;
-
-    return new RabbitMQConnection(uri, logger);
-});
-
-builder.Services.Configure<MessagingOptions>(
-    builder.Configuration.GetSection("Messaging"));
+// Application: MediatR, Validation, Mapping
+builder.AddApplication();
 
 
-// -----------------------------------------
-// 4. Application Services
-// -----------------------------------------
-builder.Services.AddServices(builder.Configuration);
+// API: Controllers, Swagger, JSON
+builder.AddApi();
 
 
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// --------------------------------------------------
-// 9. SchemaRegistry for event message contract validation on start
-// --------------------------------------------------
-var schemaRegistry = app.Services.GetRequiredService<ISchemaRegistry>();
-await schemaRegistry.RegisterSchemaFromFileAsync(
-    "ticket.created",
-    1,
-    "Schemas/ticket-created-v1.json");
-await schemaRegistry.RegisterSchemaFromFileAsync(
-    "support.agent.assigned",
-    1,
-    "Schemas/support-agent-assigned-v1.json");
+// Initialize Schema Registry
+await app.InitializeSchemaRegistryAsync();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
-app.UseHttpsRedirection();
+// Configure Middleware Pipeline
+app.ConfigureMiddleware();
 
-//Redirect to api doc
-var option = new RewriteOptions();
-option.AddRedirect("^$", "swagger");
-app.UseRewriter(option);
-
-app.UseAuthorization();
-
-// --------------------------------------------------
-// 10. Custom Exception Handling Middleware
-// --------------------------------------------------
-app.UseMiddleware<ExceptionHandlingMiddleware>();
+// Map Endpoints
 app.MapControllers();
 
-app.Run();
+
+// Run Application
+try
+{
+    Log.Information("Starting TechAssistPro.Scheduling service");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "TechAssistPro.Scheduling service terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
+

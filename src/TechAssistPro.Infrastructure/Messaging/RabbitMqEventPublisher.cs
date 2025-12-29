@@ -43,6 +43,7 @@ namespace TechAssistPro.Infrastructure.Messaging
             using var activity = _activitySource.StartActivity("rabbitmq.publish", ActivityKind.Producer);
             activity?.SetTag("event.type", eventType);
             activity?.SetTag("schema.version", schemaVersion);
+            activity?.SetTag("correlation.id", CorrelationContext.CorrelationId);
 
 
             _logger.LogInformation("Rabbitmq publisher -  started. EventType {eventType} | SchemaVersion {schemaVersion}", eventType, schemaVersion);
@@ -92,7 +93,8 @@ namespace TechAssistPro.Infrastructure.Messaging
                 { "schema-version", schemaVersion },
                 { "schema-validated", true },
                 { "published-at", DateTime.UtcNow.ToString("O") },
-                { "traceparent",Activity.Current?.Id}
+                { "traceparent", CorrelationContext.CorrelationId},
+                { "correlation.id", CorrelationContext.CorrelationId}
             }
             };
 

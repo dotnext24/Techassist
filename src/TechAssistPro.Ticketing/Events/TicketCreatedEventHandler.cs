@@ -28,6 +28,7 @@ namespace TechAssistPro.Ticketing.Events
             using var activity = _activitySource.StartActivity("Create-Ticket-Event");
             activity?.SetTag("ticket.id", domainEvent.Data.TicketId);
             activity?.SetTag("event-type", domainEvent.EventType);
+            activity?.SetTag("correlation.id", CorrelationContext.CorrelationId);
 
             _logger.LogInformation("Create-Ticket-Event started | TicketId={TicketId}", domainEvent.Data.TicketId);
             
