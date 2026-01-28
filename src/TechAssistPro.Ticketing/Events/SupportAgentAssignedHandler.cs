@@ -28,6 +28,7 @@ public sealed class SupportAgentAssignedHandler
         activity?.SetTag("ticket.id", @event.Data.TicketId);
         activity?.SetTag("support-agent-id", @event.Data.SupportAgentId);
         activity?.SetTag("event-type", @event.EventType);
+        activity?.AddTag("correlation.id", CorrelationContext.CorrelationId);
 
         _logger.LogInformation("🎯 Support-Agent-Assigned-Event started | TicketId={TicketId}", @event.Data.TicketId);
 

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using MediatR;
+using TechAssistPro.Infrastructure.Observability;
 using TechAssistPro.Scheduling.Application.Commands;
 using TechAssistPro.SharedKernel.Events;
 
@@ -31,6 +32,7 @@ public sealed class TicketCreatedHandler
         activity?.SetTag("ticket.id", @event.Data.TicketId);
         activity?.SetTag("ticket.category", @event.Data.Category);
         activity?.SetTag("event-type", @event.EventType);
+        activity?.AddTag("correlation.id", CorrelationContext.CorrelationId);
 
         _logger.LogInformation("🎯Ticket-Created-Event started | TicketId={TicketId}", @event.Data.TicketId);
         try
@@ -45,6 +47,7 @@ public sealed class TicketCreatedHandler
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             _logger.LogInformation("Ticket-Created-Event failed | TicketId={TicketId}", @event.Data.TicketId);
             // optionally persist to outbox
+            throw;
         }
 
     }

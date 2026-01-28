@@ -90,11 +90,12 @@ namespace TechAssistPro.Infrastructure.Messaging
                 Headers = new Dictionary<string, object?>
             {
                 { "event-type", eventType },
-                { "schema-version", schemaVersion },
+                { RabbitHeaders.SchemaVersion, schemaVersion },
                 { "schema-validated", true },
                 { "published-at", DateTime.UtcNow.ToString("O") },
-                { "traceparent", CorrelationContext.CorrelationId},
-                { "correlation.id", CorrelationContext.CorrelationId}
+                { RabbitHeaders.Traceparent, CorrelationContext.CorrelationId},
+                { RabbitHeaders.CorrelationId, CorrelationContext.CorrelationId},
+                { RabbitHeaders.RetryCount, 0}
             }
             };
 

@@ -11,23 +11,22 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using TechAssistPro.Infrastructure.Observability;
-using TechAssistPro.Scheduling.SerilogEnricher;
 
-namespace TechAssistPro.Scheduling.DependencyInjection
+namespace TechAssistPro.CustomerManagement.DependencyInjection
 {
     public static class ObservabilityExtensions
     {
-        public static WebApplicationBuilder AddLogger(this WebApplicationBuilder builder)
+        public static WebApplicationBuilder AddLogger(
+          this WebApplicationBuilder builder)
         {
             var otel = builder.Configuration.GetSection("OpenTelemetry");
             string? lokiUrl = otel["Loki:Url"] ?? "http://localhost:3100";
-            string? appName = otel["ServiceName"] ?? "TechAssistPro.Scheduling";
+            string? appName = otel["ServiceName"] ?? "TechAssistPro.Ticketing";
 
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning)
                 .Enrich.FromLogContext()
-                .Enrich.With<CorrelationIdEnricher>()
                 .Enrich.WithProperty("Application", appName)
                 .Enrich.WithProperty("Environment", builder.Environment.EnvironmentName)
                 .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
@@ -72,10 +71,11 @@ namespace TechAssistPro.Scheduling.DependencyInjection
         }
 
 
-        public static WebApplicationBuilder AddTracing(this WebApplicationBuilder builder)
+        public static WebApplicationBuilder AddTracing(
+       this WebApplicationBuilder builder)
         {
             var otel = builder.Configuration.GetSection("OpenTelemetry");
-            string? serviceName = otel["ServiceName"] ?? "TechAssistPro.Scheduling";
+            string? serviceName = otel["ServiceName"] ?? "TechAssistPro.Ticketing";
             string[]? activitySources = new[] { serviceName };
 
             var otlpEndpoint = otel["Otlp:Endpoint"]

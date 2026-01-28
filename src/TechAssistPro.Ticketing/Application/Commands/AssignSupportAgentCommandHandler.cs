@@ -37,6 +37,7 @@ namespace TechAssistPro.Ticketing.Application.Commands
             using var activity = _activitySource.StartActivity("Assign-Support-Agent");
             activity?.SetTag("ticket.id", request.TicketId);
             activity?.SetTag("support.agent.id", request.SupportAgentId);
+            activity?.AddTag("correlation.id", CorrelationContext.CorrelationId);
 
             _logger.LogInformation("Assign-Support-Agent started | TicketId={TicketId}", request.TicketId);
 

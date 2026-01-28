@@ -7,12 +7,8 @@ namespace TechAssistPro.Infrastructure.SchemaRegistry
 {
     public class SchemaValidationException : Exception
     {
-        public Dictionary<string, string[]> Errors { get; }
-
-        public SchemaValidationException(Dictionary<string, string[]> errors)
-            : base("Schema validation failed")
+        public SchemaValidationException(string message) : base(message)
         {
-            Errors = errors;
         }
     }
 }

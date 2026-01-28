@@ -5,8 +5,10 @@ services:
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki-data:/loki
     networks:
-      - observability
+      - observability 
 
   jaeger:
     image: jaegertracing/all-in-one:latest
@@ -36,8 +38,20 @@ services:
     networks:
       - observability
 
+  loki-checker:
+    image: curlimages/curl:latest
+    container_name: loki-checker
+    command: >
+      sh -c "while true; do
+        until curl -sf http://loki:3100/ready; do sleep 2; done;
+        echo 'Loki is ready';
+        sleep 7200;
+      done"
+    restart: always
+
 volumes:
   grafana-storage:
+  loki-data:
 
 networks:
   observability:

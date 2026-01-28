@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using TechAssistPro.Infrastructure.Observability;
 
-namespace TechAssistPro.Scheduling.Middleware
+namespace TechAssistPro.CustomerManagement.Middleware
 {
     public class CorrelationIdMiddleware
 {
@@ -28,6 +28,7 @@ namespace TechAssistPro.Scheduling.Middleware
 
         using (_logger.BeginScope(new Dictionary<string, object>
         {
+            ["CorrelationId"] = correlationId,
             ["RequestPath"] = context.Request.Path.Value ?? string.Empty,
             ["RequestMethod"] = context.Request.Method
         }))

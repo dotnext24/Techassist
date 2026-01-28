@@ -1,23 +1,24 @@
 using TechAssistPro.Infrastructure.Messaging;
 using TechAssistPro.Infrastructure.SchemaRegistry;
-using TechAssistPro.Scheduling.Application.Commands;
-using TechAssistPro.Scheduling.Events;
-using TechAssistPro.Scheduling.HostedServices;
-using TechAssistPro.Scheduling.Services;
+using TechAssistPro.CustomerManagement.Application.Commands;
+using TechAssistPro.CustomerManagement.Application.Validations;
+using TechAssistPro.CustomerManagement.Events;
 using TechAssistPro.SharedKernel.Events;
-using TechAssistPro.Scheduling.Data;
+using TechAssistPro.CustomerManagement.Data;
 using TechAssistPro.Infrastructure.Events;
 using Microsoft.AspNetCore.Rewrite;
-using TechAssistPro.Scheduling.Middleware;
+using TechAssistPro.CustomerManagement.Middleware;
 using Microsoft.EntityFrameworkCore;
 using TechAssistPro.SharedKernel.Responses;
 using Microsoft.AspNetCore.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using FluentValidation;
 
-namespace TechAssistPro.Scheduling.DependencyInjection
+
+namespace TechAssistPro.CustomerManagement.DependencyInjection
 {
-    public static class TicketingModule
+    public static class CustomerManagementModule
     {
         public static IServiceCollection AddInfrastructure(this WebApplicationBuilder builder)
         {
@@ -69,10 +70,7 @@ namespace TechAssistPro.Scheduling.DependencyInjection
                 var schemaRegistry = app.Services.GetRequiredService<ISchemaRegistry>();
 
                 await schemaRegistry.RegisterSchemaFromFileAsync(
-                    "ticket.created", 1, "Schemas/ticket-created-v1.json");
-
-                await schemaRegistry.RegisterSchemaFromFileAsync(
-                    "support.agent.assigned", 1, "Schemas/support-agent-assigned-v1.json");
+                    "customer.created", 1, "Schemas/customer-created-v1.json");
 
                 logger.LogInformation("Schema Registry initialized successfully");
             }
@@ -107,12 +105,12 @@ namespace TechAssistPro.Scheduling.DependencyInjection
         {
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
-            services.AddDbContext<SchedulingDbContext>(options =>
+            services.AddDbContext<CustomerManagementDbContext>(options =>
                 options.UseNpgsql(
                     config.GetConnectionString("TechAssistDb"),
                     npgsqlOptions =>
                     {
-                        npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "ticketing");
+                        npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "customer_management");
                         npgsqlOptions.EnableRetryOnFailure(
                             maxRetryCount: 3,
                             maxRetryDelay: TimeSpan.FromSeconds(5),
@@ -138,28 +136,24 @@ namespace TechAssistPro.Scheduling.DependencyInjection
         private static void RegisterRepositories(IServiceCollection services)
         {
             services.AddScoped<IResponseFactory, ResponseFactory>();
-            services.AddScoped<ISupportAgentRepository, SupportAgentRepository>();
-            services.AddScoped<IAssignmentRepository, AssignmentRepository>();
+            services.AddScoped<ICustomerRepository, CustomerRepository>();
             services.AddSingleton<ISchemaRegistry, SchemaRegistry>();
         }
 
         private static void RegisterServices(IServiceCollection services)
         {
-            services.AddScoped<ISupportAgentMatcher, SkillBasedSupportAgentMatcher>();
-
+            // Add services here
         }
 
         private static void RegisterEventHandlers(IServiceCollection services)
         {
             services.AddScoped<IEventPublisher, RabbitMqEventPublisher>();
-            services.AddScoped<IEventHandler<SupportAgentAssignedDomainEvent>, AssignmentCreatedEventHandler>();
-
-            services.AddScoped<IIntegrationEventHandler<TicketCreatedIntegrationEvent>, TicketCreatedHandler>();
+            services.AddScoped<IEventHandler<CustomerCreatedDomainEvent>, CustomerCreatedEventHandler>();
         }
 
         private static void RegisterHostedServices(IServiceCollection services)
         {
-            services.AddHostedService<EventSubscriptionHostedService>();
+            // Add hosted services here
         }
 
         private static void ConfigureMediatR(IServiceCollection services)
@@ -168,9 +162,8 @@ namespace TechAssistPro.Scheduling.DependencyInjection
             {
                 cfg.RegisterServicesFromAssembly(typeof(DomainEventNotificationHandler).Assembly);
 
-                cfg.RegisterServicesFromAssemblyContaining<AutoAssignSupportAgentCommandHandler>();
-                cfg.RegisterServicesFromAssemblyContaining<AssignmentCreatedEventHandler>();
-
+            cfg.RegisterServicesFromAssemblyContaining<CustomerCreateCommandHandler>();
+                // Add MediatR configurations here
             });
         }
 
@@ -180,12 +173,12 @@ namespace TechAssistPro.Scheduling.DependencyInjection
                 {
                     // custom config here (optional)
                     cfg.AllowNullCollections = true;
-                }, typeof(AutoAssignSupportAgentCommandHandler).Assembly);
+                }, typeof(CustomerManagementModule).Assembly);
         }
 
         private static void ConfigureFluentValidation(IServiceCollection services)
         {
-            //services.AddValidatorsFromAssemblyContaining<SupportAgentValidator>();
+             services.AddValidatorsFromAssemblyContaining<CustomerCreateValidator>();
         }
 
         private static void ConfigureMvcOptions(IServiceCollection services)
@@ -213,15 +206,13 @@ namespace TechAssistPro.Scheduling.DependencyInjection
             {
                 options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
                 {
-                    Title = "TechAssistPro Scheduling API",
+                    Title = "TechAssistPro Customer Management API",
                     Version = "v1",
-                    Description = "API for managing support agents and assignments"
+                    Description = "API for managing customers"
                 });
             });
         }
 
         #endregion
     }
-
-
 }

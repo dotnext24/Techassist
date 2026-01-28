@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://events.mycompany.com/customer-created-v1.json",
+  "title": "CustomerCreatedEvent",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "occurredAtUtc",
+    "data"
+  ],
+
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique ID for this event instance"
+    },
+
+    "eventType": {
+      "type": "string",
+      "const": "customer.created",
+      "description": "Event type version"
+    },
+
+    "occurredAtUtc": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the event occurred"
+    },
+
+    "data": {
+      "type": "object",
+      "required": [
+        "customerId",
+        "name",
+        "email"
+      ],
+
+      "properties": {
+        "customerId": { "type": "string", "format": "uuid" },
+        "name": { "type": "string", "minLength": 1 },
+        "email": { "type": "string", "format": "email" }
+      }
+    }
+  }
+}
