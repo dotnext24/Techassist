@@ -21,9 +21,12 @@ builder.AddApplication();
 // API: Controllers, Swagger, JSON
 builder.AddApi();
 
-
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+
+// Map health checks
+app.MapHealthChecks("/health");
 
 // Initialize Schema Registry
 await app.InitializeSchemaRegistryAsync();
