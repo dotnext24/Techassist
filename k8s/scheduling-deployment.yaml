@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scheduling-deployment
+  labels:
+    app: scheduling
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: scheduling
+  template:
+    metadata:
+      labels:
+        app: scheduling
+    spec:
+      containers:
+      - name: scheduling
+        image: techassistpro/scheduling:latest # Replace with your actual image
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ConnectionStrings__TechAssistDb
+          value: "Host=172.232.102.50;Port=5432;Database=techassist_scheduling_dev;Username=techassist;Password=Coder##12" # Replace with actual connection string and secrets management
+        - name: ConnectionStrings__RabbitMQ
+          value: "amqp://admin:Coder%23%2312@172.232.102.50:5672/"
+        - name: OpenTelemetry__Loki__Url
+          value: "http://172.232.102.50:3100"
+        - name: OpenTelemetry__Otlp__Endpoint
+          value: "http://172.232.102.50:4317" # Replace with actual RabbitMQ credentials and secrets management
+        - name: ASPNETCORE_URLS
+          value: "http://+:8080"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: scheduling-service
+  labels:
+    app: scheduling
+spec:
+  selector:
+    app: scheduling
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP

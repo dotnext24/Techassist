@@ -1,0 +1,36 @@
+### TechAssistPro Project Structure
+* .continue/
+* .git/
+* .gitignore
+* TechAssistPro.sln
+* keycloak/
+* observability/
+* src/
+	+ TechAssistPro.CustomerManagement/
+	+ TechAssistPro.Gateway/
+	+ TechAssistPro.Infrastructure/
+	+ TechAssistPro.Scheduling/
+	+ TechAssistPro.SharedKernel/
+		- Common/
+		- Domain/
+			- AggregateRoot.cs
+			- Entity.cs
+		- Events/
+			- IDomainEvent.cs
+			- IEventHandler.cs
+			- IEventPublisher.cs
+			- IIntegrationEventHandler.cs
+		- Exceptions/
+		- Pagination/
+		- Responses/
+		- TechAssistPro.SharedKernel.csproj
+	+ TechAssistPro.Ticketing/
+* Tests/
+	+ TechAssistPro.SharedKernel.Tests/
+	+ TechAssistPro.Ticketing.Tests/
+	+ TechAssistPro.Scheduling.Tests/
+	+ TechAssistPro.Infrastructure.Tests/
+* Documentation/
+	+ Architecture.md
+	+ DesignDecisions.md
+	+ Troubleshooting.md

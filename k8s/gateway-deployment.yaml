@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-deployment
+  labels:
+    app: gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+      - name: gateway
+        image: techassistpro/gateway:latest # Replace with your actual image
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ASPNETCORE_URLS
+          value: "http://+:8080"
+        # Example of how to configure upstream services for a reverse proxy/gateway
+        # This would typically be more sophisticated, possibly using a configuration management tool
+        # or a dynamic discovery mechanism. For now, hardcoding service names:
+        - name: Clusters__ticketing-cluster__Destinations__ticketing__Address
+          value: "http://ticketing-service"
+        - name: Clusters__scheduling-cluster__Destinations__scheduling__Address
+          value: "http://scheduling-service"
+        - name: Clusters__customer-cluster__Destinations__customer__Address
+          value: "http://customer-service"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+  labels:
+    app: gateway
+spec:
+  selector:
+    app: gateway
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+      nodePort: 30080
+  type: NodePort # Typically, the API Gateway would be exposed externally
