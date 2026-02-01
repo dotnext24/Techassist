@@ -17,7 +17,7 @@ docker build -t techassistpro/gateway:latest -f src/TechAssistPro.Gateway/Docker
 
 # 2. Apply Kubernetes manifests
 echo "☸️ Applying Kubernetes manifests..."
-kubectl apply -f .
+kubectl apply -f k8s/deploy/
 
 # 3. Wait for pods to be ready
 echo "⏳ Waiting for pods to be ready..."
