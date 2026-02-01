@@ -3,11 +3,10 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
 
 # Copy the entire solution and restore dependencies
-COPY TechAssistPro.sln .
 COPY src/TechAssistPro.SharedKernel/*.csproj src/TechAssistPro.SharedKernel/
 COPY src/TechAssistPro.Infrastructure/*.csproj src/TechAssistPro.Infrastructure/
 COPY src/TechAssistPro.Gateway/*.csproj src/TechAssistPro.Gateway/
-RUN dotnet restore TechAssistPro.sln
+RUN dotnet restore src/TechAssistPro.Gateway/TechAssistPro.Gateway.csproj
 
 # Copy the remaining source code
 COPY src/TechAssistPro.SharedKernel/ src/TechAssistPro.SharedKernel/
