@@ -17,6 +17,7 @@ spec:
       containers:
       - name: ticketing
         image: techassistpro/ticketing:latest # Replace with your actual image
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         env:

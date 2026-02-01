@@ -5,12 +5,15 @@ set -e
 
 echo "🚀 Starting TechAssistPro deployment to Kubernetes..."
 
+# Change to the project root directory
+cd ..
+
 # 1. Build Docker images
 echo "🐳 Building Docker images..."
-docker build -t techassistpro/ticketing:latest -f ../src/TechAssistPro.Ticketing/Dockerfile .
-docker build -t techassistpro/scheduling:latest -f ../src/TechAssistPro.Scheduling/Dockerfile .
-docker build -t techassistpro/customer:latest -f ../src/TechAssistPro.CustomerManagement/Dockerfile .
-docker build -t techassistpro/gateway:latest -f ../src/TechAssistPro.Gateway/Dockerfile .
+docker build -t techassistpro/ticketing:latest -f src/TechAssistPro.Ticketing/Dockerfile .
+docker build -t techassistpro/scheduling:latest -f src/TechAssistPro.Scheduling/Dockerfile .
+docker build -t techassistpro/customer:latest -f src/TechAssistPro.CustomerManagement/Dockerfile .
+docker build -t techassistpro/gateway:latest -f src/TechAssistPro.Gateway/Dockerfile .
 
 # 2. Apply Kubernetes manifests
 echo "☸️ Applying Kubernetes manifests..."

@@ -17,6 +17,7 @@ spec:
       containers:
       - name: gateway
         image: techassistpro/gateway:latest # Replace with your actual image
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         env:
