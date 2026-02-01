@@ -32,6 +32,8 @@ spec:
           value: "http://scheduling-service"
         - name: Clusters__customer-cluster__Destinations__customer__Address
           value: "http://customer-service"
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
         livenessProbe:
           httpGet:
             path: /health

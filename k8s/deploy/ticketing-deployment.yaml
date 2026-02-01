@@ -31,6 +31,8 @@ spec:
           value: "http://172.232.102.50:4317" # Replace with actual RabbitMQ credentials and secrets management
         - name: ASPNETCORE_URLS
           value: "http://+:8080"
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
         livenessProbe:
           httpGet:
             path: /health
