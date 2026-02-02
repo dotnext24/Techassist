@@ -15,6 +15,7 @@ kubectl delete namespace techassistpro --wait=true
 kubectl apply -f k8s/deploy/namespace.yaml
 kubectl config set-context --current --namespace=techassistpro
 
+#Delete existing docker images
 docker rmi -f \
   techassistpro/ticketing:latest \
   techassistpro/scheduling:latest \

@@ -22,8 +22,7 @@ builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddCustomRateLimiting();
 
 // Add Health Checks
-builder.Services.AddHealthChecks()
-    .AddCheck<GatewayHealthCheck>("gateway");
+builder.Services.AddHealthChecks();
 
 // Add YARP Reverse Proxy
 builder.Services.AddReverseProxy()
