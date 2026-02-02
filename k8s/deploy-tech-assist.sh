@@ -15,19 +15,23 @@ kubectl delete namespace techassistpro --wait=true
 kubectl apply -f k8s/deploy/namespace.yaml
 kubectl config set-context --current --namespace=techassistpro
 
-#Delete existing docker images
-docker rmi -f \
-  techassistpro/ticketing:latest \
-  techassistpro/scheduling:latest \
-  techassistpro/customer:latest \
-  techassistpro/gateway:latest
+IMAGE_TAG=$(git rev-parse --short HEAD)
+echo "📋 Using Git commit SHA as image tag: $IMAGE_TAG"
 
 # 1. Build Docker images
 echo "🐳 Building Docker images..."
-docker build -t techassistpro/ticketing:latest -f src/TechAssistPro.Ticketing/Dockerfile .
-docker build -t techassistpro/scheduling:latest -f src/TechAssistPro.Scheduling/Dockerfile .
-docker build -t techassistpro/customer:latest -f src/TechAssistPro.CustomerManagement/Dockerfile .
-docker build -t techassistpro/gateway:latest -f src/TechAssistPro.Gateway/Dockerfile .
+docker build -t techassistpro/ticketing:$IMAGE_TAG -f src/TechAssistPro.Ticketing/Dockerfile .
+docker build -t techassistpro/scheduling:$IMAGE_TAG -f src/TechAssistPro.Scheduling/Dockerfile .
+docker build -t techassistpro/customer:$IMAGE_TAG -f src/TechAssistPro.CustomerManagement/Dockerfile .
+docker build -t techassistpro/gateway:$IMAGE_TAG -f src/TechAssistPro.Gateway/Dockerfile .
+
+# Update Kubernetes manifests with the new tags
+echo "📝 Updating Kubernetes manifests..."
+for service in ticketing scheduling customer gateway; do
+    # Update deployment.yaml
+    sed -i "s|image: techassistpro/$service:.*|image: techassistpro/$service:$IMAGE_TAG|g" k8s/deploy/${service}-deployment.yaml
+
+done
 
 # 2. Apply Kubernetes manifests
 echo "☸️ Applying Kubernetes manifests..."
