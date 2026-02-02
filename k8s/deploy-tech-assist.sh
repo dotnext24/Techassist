@@ -8,6 +8,19 @@ echo "🚀 Starting TechAssistPro deployment to Kubernetes..."
 # Change to the project root directory
 cd ..
 
+# Deletes everything inside the namespace
+kubectl delete namespace techassistpro --wait=true
+
+#Recreate namespace
+kubectl apply -f k8s/deploy/namespace.yaml
+kubectl config set-context --current --namespace=techassistpro
+
+docker rmi -f \
+  techassistpro/ticketing:latest \
+  techassistpro/scheduling:latest \
+  techassistpro/customer:latest \
+  techassistpro/gateway:latest
+
 # 1. Build Docker images
 echo "🐳 Building Docker images..."
 docker build -t techassistpro/ticketing:latest -f src/TechAssistPro.Ticketing/Dockerfile .
@@ -17,7 +30,7 @@ docker build -t techassistpro/gateway:latest -f src/TechAssistPro.Gateway/Docker
 
 # 2. Apply Kubernetes manifests
 echo "☸️ Applying Kubernetes manifests..."
-kubectl apply -f k8s/deploy/
+kubectl apply -n techassistpro -f k8s/deploy/
 
 # 3. Wait for pods to be ready
 echo "⏳ Waiting for pods to be ready..."

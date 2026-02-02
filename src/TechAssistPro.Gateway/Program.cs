@@ -69,7 +69,7 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<CircuitBreakerMiddleware>();
 
-app.UseHttpsRedirection();
+
 app.UseCors();
 
 // Authentication & Authorization
