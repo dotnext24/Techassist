@@ -15,7 +15,7 @@ kubectl delete namespace techassistpro --wait=true
 kubectl apply -f k8s/deploy/namespace.yaml
 kubectl config set-context --current --namespace=techassistpro
 
-IMAGE_TAG=$(git rev-parse --short HEAD)
+IMAGE_TAG=$(date +%Y%m%d%H%M%S)
 echo "📋 Using Git commit SHA as image tag: $IMAGE_TAG"
 
 # 1. Build Docker images
