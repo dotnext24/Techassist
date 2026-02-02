@@ -33,12 +33,6 @@ spec:
           value: "http://+:8080"
         - name: ASPNETCORE_ENVIRONMENT
           value: "Development"
-        - name: ASPNETCORE_Kestrel__Endpoints__Https__Url
-          value: ""
-        - name: ASPNETCORE_Kestrel__Certificates__Default__Path
-          value: ""
-        - name: ASPNETCORE_Kestrel__Certificates__Default__Password
-          value: ""
         livenessProbe:
           httpGet:
             path: /health
