@@ -26,12 +26,12 @@ spec:
         # Example of how to configure upstream services for a reverse proxy/gateway
         # This would typically be more sophisticated, possibly using a configuration management tool
         # or a dynamic discovery mechanism. For now, hardcoding service names:
-        - name: Clusters__ticketing-cluster__Destinations__ticketing__Address
-          value: "http://ticketing-service:8080"
-        - name: Clusters__scheduling-cluster__Destinations__scheduling__Address
-          value: "http://scheduling-service:8080"
-        - name: Clusters__customer-cluster__Destinations__customer__Address
-          value: "http://customer-service:8080"
+        - name: ReverseProxy__Clusters__ticketing-cluster__Destinations__ticketing__Address
+          value: "http://ticketing-service"
+        - name: ReverseProxy__Clusters__scheduling-cluster__Destinations__scheduling__Address
+          value: "http://scheduling-service"
+        - name: ReverseProxy__Clusters__customer-cluster__Destinations__customer__Address
+          value: "http://customer-service"
         - name: ASPNETCORE_ENVIRONMENT
           value: "Development"
         livenessProbe:

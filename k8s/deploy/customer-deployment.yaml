@@ -35,13 +35,13 @@ spec:
           value: "Development"
         livenessProbe:
           httpGet:
-            path: /health/live
+            path: /health
             port: 8080
           initialDelaySeconds: 15
           periodSeconds: 20
         readinessProbe:
           httpGet:
-            path: /health/ready
+            path: /health
             port: 8080
           initialDelaySeconds: 5
           periodSeconds: 10
