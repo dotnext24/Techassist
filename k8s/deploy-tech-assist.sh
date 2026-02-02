@@ -25,6 +25,16 @@ docker build -t techassistpro/scheduling:$IMAGE_TAG -f src/TechAssistPro.Schedul
 docker build -t techassistpro/customer:$IMAGE_TAG -f src/TechAssistPro.CustomerManagement/Dockerfile .
 docker build -t techassistpro/gateway:$IMAGE_TAG -f src/TechAssistPro.Gateway/Dockerfile .
 
+docker save techassistpro/ticketing:$IMAGE_TAG -o ticketing_$IMAGE_TAG.tar
+docker save techassistpro/scheduling:$IMAGE_TAG -o scheduling_$IMAGE_TAG.tar
+docker save techassistpro/customer:$IMAGE_TAG -o customer_$IMAGE_TAG.tar
+docker save techassistpro/gateway:$IMAGE_TAG -o gateway_$IMAGE_TAG.tar
+
+ctr -n k8s.io images import ticketing_$IMAGE_TAG.tar
+ctr -n k8s.io images import scheduling_$IMAGE_TAG.tar
+ctr -n k8s.io images import customer_$IMAGE_TAG.tar
+ctr -n k8s.io images import gateway_$IMAGE_TAG.tar
+
 # Update Kubernetes manifests with the new tags
 echo "📝 Updating Kubernetes manifests..."
 for service in ticketing scheduling customer gateway; do

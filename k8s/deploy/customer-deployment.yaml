@@ -17,7 +17,7 @@ spec:
       containers:
       - name: customer
         image: techassistpro/customer:latest # Replace with your actual image
-        imagePullPolicy: Never
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         env:
