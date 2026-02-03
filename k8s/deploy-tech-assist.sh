@@ -9,7 +9,7 @@ echo "🚀 Starting TechAssistPro deployment to Kubernetes..."
 cd ..
 
 # Deletes everything inside the namespace
-kubectl delete namespace techassistpro --wait=true
+kubectl delete namespace techassistpro --ignore-not-found --wait=true
 
 #Recreate namespace
 kubectl apply -f k8s/deploy/namespace.yaml
