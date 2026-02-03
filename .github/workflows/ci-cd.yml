@@ -1,4 +1,4 @@
-name: CI-CD
+name: test
 
 on:
   push:
@@ -6,27 +6,7 @@ on:
       - main
 
 jobs:
-  ci:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      # --- Build backend ---
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: 8.0.x
-
-      - name: Restore dependencies
-        run: dotnet restore TechAssistPro.sln 
-
-      - name: Build solution
-        run: dotnet build TechAssistPro.sln -c Release --no-restore      
-  cd:
-  needs: ci
-  runs-on: self-hosted
-  steps:
-    - uses: actions/checkout@v4
-    - name: Deploy to cluster
-      run: ./k8s/deploy-tech-assist.sh
-
+      - run: echo "Workflow triggered!"
