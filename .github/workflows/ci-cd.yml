@@ -22,48 +22,11 @@ jobs:
 
       - name: Build solution
         run: dotnet build TechAssistPro.sln -c Release --no-restore      
-
-      # --- Docker login to GHCR ---
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
-
-      # --- Build Docker images ---
-      - name: Build Docker Images
-        run: |
-          docker build -t ghcr.io/${{ github.repository }}/ticketing:latest -f src/TechAssistPro.Ticketing/Dockerfile .
-          docker build -t ghcr.io/${{ github.repository }}/scheduling:latest -f src/TechAssistPro.Scheduling/Dockerfile .
-          docker build -t ghcr.io/${{ github.repository }}/customer:latest -f src/TechAssistPro.CustomerManagement/Dockerfile .
-          docker build -t ghcr.io/${{ github.repository }}/gateway:latest -f src/TechAssistPro.Gateway/Dockerfile .
-
-      # --- Push Docker images to GHCR ---
-      - name: Push Docker Images
-        run: |
-          docker push ghcr.io/${{ github.repository }}/ticketing:latest
-          docker push ghcr.io/${{ github.repository }}/scheduling:latest
-          docker push ghcr.io/${{ github.repository }}/customer:latest
-          docker push ghcr.io/${{ github.repository }}/gateway:latest
-
-      # --- Update k8s manifests with new image tags ---
-      - name: Update Deployment Manifests
-        run: |
-          sed -i "s|image: techassistpro/ticketing:.*|image: ghcr.io/${{ github.repository }}/ticketing:latest|g" k8s/deploy/ticketing-deployment.yaml
-          sed -i "s|image: techassistpro/scheduling:.*|image: ghcr.io/${{ github.repository }}/scheduling:latest|g" k8s/deploy/scheduling-deployment.yaml
-          sed -i "s|image: techassistpro/customer:.*|image: ghcr.io/${{ github.repository }}/customer:latest|g" k8s/deploy/customer-deployment.yaml
-          sed -i "s|image: techassistpro/gateway:.*|image: ghcr.io/${{ github.repository }}/gateway:latest|g" k8s/deploy/gateway-deployment.yaml
-          git config --global user.email "ci@bot.com"
-          git config --global user.name "CI Bot"
-          git commit -am "Update Docker images"
-          git push
-
   cd:
   needs: ci
   runs-on: self-hosted
   steps:
     - uses: actions/checkout@v4
     - name: Deploy to cluster
-      run: kubectl apply -k k8s/deploy
+      run: ./k8s/deploy-tech-assist.sh
 
