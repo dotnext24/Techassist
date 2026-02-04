@@ -23,9 +23,9 @@ jobs:
       - name: Build solution
         run: dotnet build TechAssistPro.sln -c Release --no-restore      
   cd:
-  needs: ci
-  runs-on: self-hosted
-  steps:
-    - uses: actions/checkout@v4
-    - name: Deploy to cluster
-      run: ./k8s/deploy-tech-assist.sh
+    needs: ci
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to cluster
+        run: ./k8s/deploy-tech-assist.sh
