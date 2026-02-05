@@ -1,65 +1,75 @@
-ci:
-  runs-on: ubuntu-latest
-  steps:
-    - uses: actions/checkout@v4
+name: CI-CD
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+on:
+  push:
+    branches:
+      - main
 
-    - name: Build & Push Images
-      env:
-        TAG: ${{ github.sha }}
-        USER: ${{ secrets.DOCKERHUB_USERNAME }}
-      run: |
-        docker build -t $USER/techassistpro-ticketing:$TAG -f src/TechAssistPro.Ticketing/Dockerfile .
-        docker build -t $USER/techassistpro-scheduling:$TAG -f src/TechAssistPro.Scheduling/Dockerfile .
-        docker build -t $USER/techassistpro-customer:$TAG -f src/TechAssistPro.CustomerManagement/Dockerfile .
-        docker build -t $USER/techassistpro-gateway:$TAG -f src/TechAssistPro.Gateway/Dockerfile .
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-        docker push $USER/techassistpro-ticketing:$TAG
-        docker push $USER/techassistpro-scheduling:$TAG
-        docker push $USER/techassistpro-customer:$TAG
-        docker push $USER/techassistpro-gateway:$TAG
-cd:
-  needs: ci
-  runs-on: self-hosted
-  steps:
-    - uses: actions/checkout@v4
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Ensure namespace & base manifests
-      run: |
-        kubectl apply -f k8s/deploy/namespace.yaml
-        kubectl apply -n techassistpro -f k8s/deploy/
+      - name: Build & Push Images
+        env:
+          TAG: ${{ github.sha }}
+          USER: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
+          docker build -t $USER/techassistpro-ticketing:$TAG -f src/TechAssistPro.Ticketing/Dockerfile .
+          docker build -t $USER/techassistpro-scheduling:$TAG -f src/TechAssistPro.Scheduling/Dockerfile .
+          docker build -t $USER/techassistpro-customer:$TAG -f src/TechAssistPro.CustomerManagement/Dockerfile .
+          docker build -t $USER/techassistpro-gateway:$TAG -f src/TechAssistPro.Gateway/Dockerfile .
 
-    - name: Update images
-      env:
-        TAG: ${{ github.sha }}
-        USER: ${{ secrets.DOCKERHUB_USERNAME }}
-      run: |
-        kubectl set image deployment/ticketing \
-          ticketing=$USER/techassistpro-ticketing:$TAG -n techassistpro
+          docker push $USER/techassistpro-ticketing:$TAG
+          docker push $USER/techassistpro-scheduling:$TAG
+          docker push $USER/techassistpro-customer:$TAG
+          docker push $USER/techassistpro-gateway:$TAG
 
-        kubectl set image deployment/scheduling \
-          scheduling=$USER/techassistpro-scheduling:$TAG -n techassistpro
+  cd:
+    needs: ci
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
 
-        kubectl set image deployment/customer \
-          customer=$USER/techassistpro-customer:$TAG -n techassistpro
+      - name: Ensure namespace & base manifests
+        run: |
+          kubectl apply -f k8s/deploy/namespace.yaml
+          kubectl apply -n techassistpro -f k8s/deploy/
 
-        kubectl set image deployment/gateway \
-          gateway=$USER/techassistpro-gateway:$TAG -n techassistpro
-    - name: Force Always pull policy for all services
-      run: |
-        for d in ticketing scheduling customer gateway; do
-        kubectl patch deployment $d -n techassistpro \
-        -p '{"spec":{"template":{"spec":{"containers":[{"name":"'$d'","imagePullPolicy":"Always"}]}}}}'
-        done
+      - name: Update images
+        env:
+          TAG: ${{ github.sha }}
+          USER: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
+          kubectl set image deployment/ticketing \
+            ticketing=$USER/techassistpro-ticketing:$TAG -n techassistpro
 
-    - name: Wait for rollout
-      run: |
-        kubectl rollout status deployment/ticketing -n techassistpro
-        kubectl rollout status deployment/scheduling -n techassistpro
-        kubectl rollout status deployment/customer -n techassistpro
-        kubectl rollout status deployment/gateway -n techassistpro
+          kubectl set image deployment/scheduling \
+            scheduling=$USER/techassistpro-scheduling:$TAG -n techassistpro
+
+          kubectl set image deployment/customer \
+            customer=$USER/techassistpro-customer:$TAG -n techassistpro
+
+          kubectl set image deployment/gateway \
+            gateway=$USER/techassistpro-gateway:$TAG -n techassistpro
+
+      - name: Force Always pull policy for all services
+        run: |
+          for d in ticketing scheduling customer gateway; do
+            kubectl patch deployment $d -n techassistpro \
+              -p '{"spec":{"template":{"spec":{"containers":[{"name":"'$d'","imagePullPolicy":"Always"}]}}}}'
+          done
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/ticketing -n techassistpro
+          kubectl rollout status deployment/scheduling -n techassistpro
+          kubectl rollout status deployment/customer -n techassistpro
+          kubectl rollout status deployment/gateway -n techassistpro
