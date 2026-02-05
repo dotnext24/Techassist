@@ -30,7 +30,7 @@ public class WeatherForecastController : ControllerBase
         .ToArray();
     }
 
-    [HttpGet(Name = "Test")]
+    [HttpPost(Name = "Test")]
     public string Test()
     {
         return "test works";
