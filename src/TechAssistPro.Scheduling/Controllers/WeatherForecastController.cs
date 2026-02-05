@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace TechAssistPro.Scheduling.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/scheduling")]
 public class WeatherForecastController : ControllerBase
 {
     private static readonly string[] Summaries = new[]
