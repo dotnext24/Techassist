@@ -43,29 +43,38 @@ jobs:
           kubectl apply -f k8s/deploy/namespace.yaml
           kubectl apply -n techassistpro -f k8s/deploy/
 
-      - name: Update images
+      - name: Update images and pull policy
         env:
           TAG: ${{ github.sha }}
           USER: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
-          kubectl set image deployment/ticketing-deployment \
-            ticketing=$USER/techassistpro-ticketing:$TAG -n techassistpro
+          kubectl patch deployment ticketing-deployment -n techassistpro \
+          --type='json' \
+          -p='[
+          {"op":"replace","path":"/spec/template/spec/containers/0/image","value":"'"$USER"'/techassistpro-ticketing:'"$TAG"'"},
+          {"op":"replace","path":"/spec/template/spec/containers/0/imagePullPolicy","value":"Always"}
+          ]'
 
-          kubectl set image deployment/scheduling-deployment \
-            scheduling=$USER/techassistpro-scheduling:$TAG -n techassistpro
+          kubectl patch deployment scheduling-deployment -n techassistpro \
+          --type='json' \
+          -p='[
+          {"op":"replace","path":"/spec/template/spec/containers/0/image","value":"'"$USER"'/techassistpro-scheduling:'"$TAG"'"},
+          {"op":"replace","path":"/spec/template/spec/containers/0/imagePullPolicy","value":"Always"}
+          ]'
 
-          kubectl set image deployment/customer-deployment \
-            customer=$USER/techassistpro-customer:$TAG -n techassistpro
+          kubectl patch deployment customer-deployment -n techassistpro \
+          --type='json' \
+          -p='[
+          {"op":"replace","path":"/spec/template/spec/containers/0/image","value":"'"$USER"'/techassistpro-customer:'"$TAG"'"},
+          {"op":"replace","path":"/spec/template/spec/containers/0/imagePullPolicy","value":"Always"}
+          ]'
 
-          kubectl set image deployment/gateway-deployment \
-            gateway=$USER/techassistpro-gateway:$TAG -n techassistpro
-
-      - name: Force Always pull policy for all services
-        run: |
-          for d in ticketing-deployment scheduling-deployment customer-deployment gateway-deployment; do
-            kubectl patch deployment $d -n techassistpro \
-              -p '{"spec":{"template":{"spec":{"containers":[{"name":"'$d'","imagePullPolicy":"Always"}]}}}}'
-          done
+          kubectl patch deployment gateway-deployment -n techassistpro \
+          --type='json' \
+          -p='[
+          {"op":"replace","path":"/spec/template/spec/containers/0/image","value":"'"$USER"'/techassistpro-gateway:'"$TAG"'"},
+          {"op":"replace","path":"/spec/template/spec/containers/0/imagePullPolicy","value":"Always"}
+          ]'      
 
       - name: Wait for rollout
         run: |
