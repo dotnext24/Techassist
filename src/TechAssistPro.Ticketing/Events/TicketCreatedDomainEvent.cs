@@ -1,4 +1,5 @@
 using TechAssistPro.SharedKernel.Events;
+using TechAssistPro.Ticketing.Entities;
 
 namespace TechAssistPro.Ticketing.Events;
 public sealed record TicketCreatedDomainEvent : IDomainEvent
